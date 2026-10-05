@@ -5,8 +5,8 @@ from .api.router import api_router
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="Personal Document Intelligence API",
-        description="Ask grounded questions about personal documents.",
+        title="Document Intelligence Platform",
+        description="Understand and learn from documents using OCR and AI.",
         version="0.1.0",
     )
 

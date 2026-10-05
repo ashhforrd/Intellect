@@ -63,4 +63,5 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_documents_status"), table_name="documents")
     op.drop_index(op.f("ix_documents_owner_id"), table_name="documents")
     op.drop_table("documents")
+    op.execute("DROP TYPE document_status")
     # ### end Alembic commands ###
