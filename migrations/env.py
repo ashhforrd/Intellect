@@ -5,7 +5,10 @@ from sqlalchemy import engine_from_config, pool
 
 from personal_document_intelligence_api.core.config import get_settings
 from personal_document_intelligence_api.database.base import Base
-from personal_document_intelligence_api.database.models import Document  # noqa: F401
+from personal_document_intelligence_api.database.models import (  # noqa: F401
+    Document,
+    DocumentSection,
+)
 
 config = context.config
 settings = get_settings()

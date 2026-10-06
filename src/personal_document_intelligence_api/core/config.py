@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     storage_backend: Literal["local", "s3"] = "local"
     aws_region: str = "ap-southeast-2"
     s3_bucket_name: str | None = None
+    sqs_queue_url: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

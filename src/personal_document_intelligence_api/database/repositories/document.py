@@ -90,3 +90,42 @@ class DocumentRepository:
         await self._session.flush()
 
         return True
+
+    async def get_by_id_internal(
+        self,
+        document_id: UUID,
+    ) -> Document | None:
+        statement = select(Document).where(Document.id == document_id)
+        result = await self._session.execute(statement)
+
+        return result.scalar_one_or_none()
+
+    async def mark_processing(
+        self,
+        document: Document,
+    ) -> None:
+        document.status = DocumentStatus.PROCESSING
+        document.error_message = None
+
+        await self._session.flush()
+
+    async def mark_ready(
+        self,
+        document: Document,
+        page_count: int | None,
+    ) -> None:
+        document.status = DocumentStatus.READY
+        document.page_count = page_count
+        document.error_message = None
+
+        await self._session.flush()
+
+    async def mark_failed(
+        self,
+        document: Document,
+        error_message: str,
+    ) -> None:
+        document.status = DocumentStatus.FAILED
+        document.error_message = error_message[:2000]
+
+        await self._session.flush()

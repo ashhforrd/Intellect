@@ -14,20 +14,20 @@ from personal_document_intelligence_api.database.repositories.document import (
 from personal_document_intelligence_api.documents.deletion_service import (
     DocumentDeletionService,
 )
-from personal_document_intelligence_api.documents.models import ParsedDocument
+from personal_document_intelligence_api.documents.models import (
+    ValidatedDocumentUpload,
+)
 from personal_document_intelligence_api.documents.upload_service import (
     DocumentUploadService,
 )
 from personal_document_intelligence_api.storage import FileStorage
 
 
-def create_parsed_document() -> ParsedDocument:
-    return ParsedDocument(
+def create_validated_document_upload() -> ValidatedDocumentUpload:
+    return ValidatedDocumentUpload(
         filename="document.pdf",
         file_type="pdf",
         size_bytes=100,
-        page_count=1,
-        sections=(),
     )
 
 
@@ -62,7 +62,7 @@ async def test_upload_commits_database_transaction() -> None:
     result = await service.upload(
         owner_id="user-123",
         file_bytes=b"document content",
-        parsed_document=create_parsed_document(),
+        document_upload=create_validated_document_upload(),
     )
 
     assert result is database_document
@@ -90,7 +90,7 @@ async def test_upload_removes_file_when_database_fails() -> None:
         await service.upload(
             owner_id="user-123",
             file_bytes=b"document content",
-            parsed_document=create_parsed_document(),
+            document_upload=create_validated_document_upload(),
         )
 
     saved_key = storage.save.call_args.args[0]

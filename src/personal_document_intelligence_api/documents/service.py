@@ -1,6 +1,13 @@
-from .models import ParsedDocument
+from pathlib import Path
+
+from .models import ParsedDocument, ValidatedDocumentUpload
 from .ocr import OcrEngine
-from .parser import parse_document
+from .parser import (
+    SUPPORTED_EXTENSIONS,
+    EmptyDocumentError,
+    UnsupportedDocumentTypeError,
+    parse_document,
+)
 
 DEFAULT_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 
@@ -31,15 +38,10 @@ class DocumentExtractionService:
         filename: str,
         file_bytes: bytes,
     ) -> ParsedDocument:
-        safe_filename = self._sanitize_filename(filename)
-
-        if len(file_bytes) > self._max_file_size_bytes:
-            max_size_mb = self._max_file_size_bytes // (1024 * 1024)
-
-            raise DocumentTooLargeError(f"Document size must not exceed {max_size_mb} MB")
+        upload = self.validate(filename, file_bytes)
 
         return parse_document(
-            filename=safe_filename,
+            filename=upload.filename,
             file_bytes=file_bytes,
             ocr_engine=self._ocr_engine,
         )
@@ -55,3 +57,30 @@ class DocumentExtractionService:
             raise InvalidFilenameError("The document filename contains invalid characters")
 
         return safe_filename
+
+    def validate(
+        self,
+        filename: str,
+        file_bytes: bytes,
+    ) -> ValidatedDocumentUpload:
+        safe_filename = self._sanitize_filename(filename)
+
+        if len(file_bytes) > self._max_file_size_bytes:
+            max_size_mb = self._max_file_size_bytes // (1024 * 1024)
+            raise DocumentTooLargeError(f"Document size must not exceed {max_size_mb} MB")
+
+        if not file_bytes:
+            raise EmptyDocumentError("The document is empty")
+
+        extension = Path(safe_filename).suffix.lower()
+
+        if extension not in SUPPORTED_EXTENSIONS:
+            raise UnsupportedDocumentTypeError(
+                f"Unsupported document type: {extension or 'unknown'}"
+            )
+
+        return ValidatedDocumentUpload(
+            filename=safe_filename,
+            file_type=extension.removeprefix("."),
+            size_bytes=len(file_bytes),
+        )

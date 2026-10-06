@@ -17,6 +17,7 @@ from starlette.concurrency import run_in_threadpool
 from personal_document_intelligence_api.api.dependencies.auth import (
     get_current_owner_id,
 )
+from personal_document_intelligence_api.api.dependencies.jobs import get_job_queue
 from personal_document_intelligence_api.api.dependencies.storage import (
     get_file_storage,
 )
@@ -24,9 +25,13 @@ from personal_document_intelligence_api.api.schemas.documents import (
     DocumentExtractionResponse,
     DocumentResponse,
     DocumentSectionResponse,
+    StoredDocumentSectionResponse,
 )
 from personal_document_intelligence_api.database.repositories.document import (
     DocumentRepository,
+)
+from personal_document_intelligence_api.database.repositories.document_section import (
+    DocumentSectionRepository,
 )
 from personal_document_intelligence_api.database.session import (
     get_database_session,
@@ -49,6 +54,7 @@ from personal_document_intelligence_api.documents.service import (
 from personal_document_intelligence_api.documents.upload_service import (
     DocumentUploadService,
 )
+from personal_document_intelligence_api.jobs.base import JobQueue, JobQueueError
 from personal_document_intelligence_api.storage import FileStorage, StorageError
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -132,6 +138,10 @@ async def upload_document(
         FileStorage,
         Depends(get_file_storage),
     ],
+    job_queue: Annotated[
+        JobQueue,
+        Depends(get_job_queue),
+    ],
     owner_id: Annotated[
         str,
         Depends(get_current_owner_id),
@@ -143,8 +153,8 @@ async def upload_document(
         await file.close()
 
     try:
-        parsed_document = await run_in_threadpool(
-            extraction_service.extract,
+        document_upload = await run_in_threadpool(
+            extraction_service.validate,
             file.filename or "",
             file_bytes,
         )
@@ -180,12 +190,23 @@ async def upload_document(
         document = await upload_service.upload(
             owner_id=owner_id,
             file_bytes=file_bytes,
-            parsed_document=parsed_document,
+            document_upload=document_upload,
         )
     except StorageError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Document storage is unavailable",
+        ) from error
+
+    try:
+        await run_in_threadpool(
+            job_queue.publish_document_processing,
+            document.id,
+        )
+    except JobQueueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Document was stored, but processing could not be queued",
         ) from error
 
     return DocumentResponse.model_validate(document)
@@ -293,3 +314,37 @@ async def delete_document(
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/{document_id}/sections",
+    response_model=list[StoredDocumentSectionResponse],
+)
+async def list_document_sections(
+    document_id: UUID,
+    session: Annotated[
+        AsyncSession,
+        Depends(get_database_session),
+    ],
+    owner_id: Annotated[
+        str,
+        Depends(get_current_owner_id),
+    ],
+) -> list[StoredDocumentSectionResponse]:
+    document_repository = DocumentRepository(session)
+
+    document = await document_repository.get_by_id(
+        document_id=document_id,
+        owner_id=owner_id,
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    section_repository = DocumentSectionRepository(session)
+    sections = await section_repository.list_for_document(document.id)
+
+    return [StoredDocumentSectionResponse.model_validate(section) for section in sections]

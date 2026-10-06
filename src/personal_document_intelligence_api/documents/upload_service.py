@@ -7,7 +7,9 @@ from personal_document_intelligence_api.database.models.document import Document
 from personal_document_intelligence_api.database.repositories.document import (
     DocumentRepository,
 )
-from personal_document_intelligence_api.documents.models import ParsedDocument
+from personal_document_intelligence_api.documents.models import (
+    ValidatedDocumentUpload,
+)
 from personal_document_intelligence_api.storage import FileStorage
 
 
@@ -27,9 +29,9 @@ class DocumentUploadService:
         *,
         owner_id: str,
         file_bytes: bytes,
-        parsed_document: ParsedDocument,
+        document_upload: ValidatedDocumentUpload,
     ) -> Document:
-        storage_key = self._create_storage_key(parsed_document.filename)
+        storage_key = self._create_storage_key(document_upload.filename)
         file_saved = False
 
         try:
@@ -42,11 +44,11 @@ class DocumentUploadService:
 
             document = await self._repository.create(
                 owner_id=owner_id,
-                filename=parsed_document.filename,
-                file_type=parsed_document.file_type,
+                filename=document_upload.filename,
+                file_type=document_upload.file_type,
                 storage_key=storage_key,
-                size_bytes=parsed_document.size_bytes,
-                page_count=parsed_document.page_count,
+                size_bytes=document_upload.size_bytes,
+                page_count=None,
             )
 
             await self._session.commit()

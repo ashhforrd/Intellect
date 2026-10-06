@@ -40,3 +40,10 @@ class ParsedDocument:
     @property
     def ocr_section_count(self) -> int:
         return sum(section.extraction_method == ExtractionMethod.OCR for section in self.sections)
+
+
+@dataclass(frozen=True, slots=True)
+class ValidatedDocumentUpload:
+    filename: str
+    file_type: str
+    size_bytes: int

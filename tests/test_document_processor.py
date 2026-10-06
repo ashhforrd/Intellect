@@ -1,0 +1,84 @@
+from unittest.mock import AsyncMock, Mock
+from uuid import uuid4
+
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from personal_document_intelligence_api.database.models.document import (
+    Document,
+    DocumentStatus,
+)
+from personal_document_intelligence_api.database.repositories.document import (
+    DocumentRepository,
+)
+from personal_document_intelligence_api.database.repositories.document_section import (
+    DocumentSectionRepository,
+)
+from personal_document_intelligence_api.documents.models import (
+    DocumentSection,
+    ExtractionMethod,
+    ParsedDocument,
+)
+from personal_document_intelligence_api.documents.service import (
+    DocumentExtractionService,
+)
+from personal_document_intelligence_api.storage.base import FileStorage
+from personal_document_intelligence_api.workers.document_processor import (
+    DocumentProcessor,
+)
+
+
+@pytest.mark.asyncio
+async def test_process_document_successfully() -> None:
+    session = AsyncMock(spec=AsyncSession)
+    repository = AsyncMock(spec=DocumentRepository)
+    section_repository = AsyncMock(spec=DocumentSectionRepository)
+    storage = Mock(spec=FileStorage)
+    extraction_service = Mock(spec=DocumentExtractionService)
+
+    document = Document(
+        id=uuid4(),
+        owner_id="user-123",
+        filename="document.pdf",
+        file_type="pdf",
+        storage_key="documents/123/document.pdf",
+        size_bytes=100,
+        status=DocumentStatus.UPLOADED,
+    )
+    parsed_document = ParsedDocument(
+        filename="document.pdf",
+        file_type="pdf",
+        size_bytes=100,
+        page_count=1,
+        sections=(
+            DocumentSection(
+                text="Extracted content",
+                page_number=1,
+                extraction_method=ExtractionMethod.NATIVE,
+            ),
+        ),
+    )
+
+    repository.get_by_id_internal.return_value = document
+    storage.read.return_value = b"document bytes"
+    extraction_service.extract.return_value = parsed_document
+
+    processor = DocumentProcessor(
+        session=session,
+        repository=repository,
+        section_repository=section_repository,
+        storage=storage,
+        extraction_service=extraction_service,
+    )
+
+    result = await processor.process(document.id)
+
+    assert result is True
+    repository.mark_processing.assert_awaited_once_with(document)
+    storage.read.assert_called_once_with(document.storage_key)
+    section_repository.replace_for_document.assert_awaited_once_with(
+        document.id,
+        parsed_document.sections,
+    )
+    repository.mark_ready.assert_awaited_once_with(document, 1)
+    assert session.commit.await_count == 2

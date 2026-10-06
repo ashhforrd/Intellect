@@ -37,3 +37,14 @@ class DocumentResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StoredDocumentSectionResponse(BaseModel):
+    id: UUID
+    position: int
+    text: str
+    page_number: int | None
+    extraction_method: ExtractionMethod
+    confidence: float | None
+
+    model_config = ConfigDict(from_attributes=True)
