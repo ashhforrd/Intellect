@@ -1,9 +1,12 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from personal_document_intelligence_api.database.models.document_chunk import (
+    DocumentChunk,
+)
 from personal_document_intelligence_api.database.repositories.document_chunk import (
     ChunkEmbeddingCountMismatchError,
     DocumentChunkRepository,
@@ -58,3 +61,36 @@ async def test_reject_mismatched_chunk_and_embedding_counts() -> None:
             ],
             embeddings=[],
         )
+
+
+@pytest.mark.asyncio
+async def test_semantic_search_maps_distance_to_similarity() -> None:
+    session = AsyncMock(spec=AsyncSession)
+    query_result = Mock()
+    document_id = uuid4()
+
+    stored_chunk = DocumentChunk(
+        id=uuid4(),
+        document_id=document_id,
+        position=0,
+        section_position=0,
+        chunk_index=0,
+        text="Relevant document content",
+        page_number=1,
+        embedding=[0.1, 0.2],
+    )
+
+    query_result.all.return_value = [(stored_chunk, 0.15)]
+    session.execute.return_value = query_result
+
+    repository = DocumentChunkRepository(session)
+
+    results = await repository.semantic_search(
+        owner_id="user-123",
+        query_embedding=[0.1, 0.2],
+        limit=5,
+    )
+
+    assert len(results) == 1
+    assert results[0].text == "Relevant document content"
+    assert results[0].score == pytest.approx(0.85)
