@@ -2,6 +2,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
+from personal_document_intelligence_api.evaluation.cases import (
+    RetrievalEvaluationCase,
+)
+from personal_document_intelligence_api.retrieval.models import (
+    SemanticSearchResult,
+)
+
 
 class InvalidEvaluationCaseError(ValueError):
     pass
@@ -31,4 +38,28 @@ def calculate_retrieval_metrics(
         hit=bool(relevant_retrieved),
         precision=precision,
         recall=recall,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class RetrievalCaseResult:
+    name: str
+    hit: bool
+    term_coverage: float
+    matched_terms: tuple[str, ...]
+
+
+def evaluate_retrieval_case(
+    case: RetrievalEvaluationCase,
+    results: Sequence[SemanticSearchResult],
+) -> RetrievalCaseResult:
+    retrieved_text = " ".join(result.text.lower() for result in results)
+
+    matched_terms = tuple(term for term in case.expected_terms if term.lower() in retrieved_text)
+
+    return RetrievalCaseResult(
+        name=case.name,
+        hit=bool(matched_terms),
+        term_coverage=len(matched_terms) / len(case.expected_terms),
+        matched_terms=matched_terms,
     )
