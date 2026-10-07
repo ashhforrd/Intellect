@@ -9,6 +9,7 @@ dependencies = [
     "boto3>=1.43.108",
     "fastapi>=0.115,<1.0",
     "openai>=3.26.0",
+    "pgvector>=0.5.0",
     "pillow>=12.3.0",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.15.0",

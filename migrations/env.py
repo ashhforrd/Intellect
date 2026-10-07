@@ -7,6 +7,7 @@ from personal_document_intelligence_api.core.config import get_settings
 from personal_document_intelligence_api.database.base import Base
 from personal_document_intelligence_api.database.models import (  # noqa: F401
     Document,
+    DocumentChunk,
     DocumentSection,
 )
 
