@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
+    generation_model: str = "gpt-6-luna"
+    generation_max_output_tokens: int = 800
 
     model_config = SettingsConfigDict(
         env_file=".env",
