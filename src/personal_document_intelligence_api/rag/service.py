@@ -15,9 +15,11 @@ class RagService:
         self,
         search_service: SemanticSearchService,
         answer_generator: AnswerGenerator,
+        minimum_score: float,
     ) -> None:
         self.search_service = search_service
         self.answer_generator = answer_generator
+        self.minimum_score = minimum_score
 
     async def ask(
         self,
@@ -27,12 +29,14 @@ class RagService:
         document_id: UUID | None = None,
         retrieval_limit: int = 5,
     ) -> RagAnswer:
-        sources = await self.search_service.search(
+        retrieved_sources = await self.search_service.search(
             query=question,
             owner_id=owner_id,
             limit=retrieval_limit,
             document_id=document_id,
         )
+
+        sources = [source for source in retrieved_sources if source.score >= self.minimum_score]
 
         if not sources:
             return RagAnswer(

@@ -17,6 +17,10 @@ from personal_document_intelligence_api.api.schemas.questions import (
     QuestionResponse,
     QuestionSourceResponse,
 )
+from personal_document_intelligence_api.core.config import (
+    Settings,
+    get_settings,
+)
 from personal_document_intelligence_api.database.repositories.document_chunk import (
     DocumentChunkRepository,
 )
@@ -62,6 +66,10 @@ async def ask_question(
         str,
         Depends(get_current_owner_id),
     ],
+    settings: Annotated[
+        Settings,
+        Depends(get_settings),
+    ],
 ) -> QuestionResponse:
     search_service = SemanticSearchService(
         repository=DocumentChunkRepository(session),
@@ -70,6 +78,7 @@ async def ask_question(
     rag_service = RagService(
         search_service=search_service,
         answer_generator=answer_generator,
+        minimum_score=settings.rag_minimum_score,
     )
 
     try:

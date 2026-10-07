@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
     generation_model: str = "gpt-6-luna"
     generation_max_output_tokens: int = 800
+    rag_minimum_score: float = 0.25
 
     model_config = SettingsConfigDict(
         env_file=".env",

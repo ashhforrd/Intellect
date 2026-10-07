@@ -35,6 +35,7 @@ async def test_rag_retrieves_sources_and_generates_answer() -> None:
     service = RagService(
         search_service=search_service,
         answer_generator=answer_generator,
+        minimum_score=0.25,
     )
 
     result = await service.ask(
@@ -59,6 +60,7 @@ async def test_rag_skips_generation_when_no_sources_found() -> None:
     service = RagService(
         search_service=search_service,
         answer_generator=answer_generator,
+        minimum_score=0.25,
     )
 
     result = await service.ask(
@@ -67,4 +69,34 @@ async def test_rag_skips_generation_when_no_sources_found() -> None:
     )
 
     assert result.sources == ()
+    answer_generator.generate.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_rag_skips_generation_for_irrelevant_sources() -> None:
+    search_service = AsyncMock(spec=SemanticSearchService)
+    answer_generator = Mock(spec=AnswerGenerator)
+    search_service.search.return_value = [
+        SemanticSearchResult(
+            chunk_id=uuid4(),
+            document_id=uuid4(),
+            text="Unrelated content",
+            page_number=1,
+            score=0.10,
+        )
+    ]
+
+    service = RagService(
+        search_service=search_service,
+        answer_generator=answer_generator,
+        minimum_score=0.25,
+    )
+
+    result = await service.ask(
+        question="A question unrelated to the documents",
+        owner_id="user-123",
+    )
+
+    assert result.sources == ()
+    assert result.answer == ("The answer could not be found in the documents.")
     answer_generator.generate.assert_not_called()
