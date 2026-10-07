@@ -11,6 +11,9 @@ from personal_document_intelligence_api.database.models.document import (
 from personal_document_intelligence_api.database.repositories.document import (
     DocumentRepository,
 )
+from personal_document_intelligence_api.database.repositories.document_chunk import (
+    DocumentChunkRepository,
+)
 from personal_document_intelligence_api.database.repositories.document_section import (
     DocumentSectionRepository,
 )
@@ -21,6 +24,9 @@ from personal_document_intelligence_api.documents.models import (
 )
 from personal_document_intelligence_api.documents.service import (
     DocumentExtractionService,
+)
+from personal_document_intelligence_api.retrieval.embeddings.base import (
+    EmbeddingProvider,
 )
 from personal_document_intelligence_api.storage.base import FileStorage
 from personal_document_intelligence_api.workers.document_processor import (
@@ -35,6 +41,9 @@ async def test_process_document_successfully() -> None:
     section_repository = AsyncMock(spec=DocumentSectionRepository)
     storage = Mock(spec=FileStorage)
     extraction_service = Mock(spec=DocumentExtractionService)
+    chunk_repository = AsyncMock(spec=DocumentChunkRepository)
+    embedding_provider = Mock(spec=EmbeddingProvider)
+    embedding_provider.embed_texts.return_value = [[0.1, 0.2]]
 
     document = Document(
         id=uuid4(),
@@ -67,13 +76,17 @@ async def test_process_document_successfully() -> None:
         session=session,
         repository=repository,
         section_repository=section_repository,
+        chunk_repository=chunk_repository,
         storage=storage,
         extraction_service=extraction_service,
+        embedding_provider=embedding_provider,
     )
 
     result = await processor.process(document.id)
 
     assert result is True
+    embedding_provider.embed_texts.assert_called_once_with(["Extracted content"])
+    chunk_repository.replace_for_document.assert_awaited_once()
     repository.mark_processing.assert_awaited_once_with(document)
     storage.read.assert_called_once_with(document.storage_key)
     section_repository.replace_for_document.assert_awaited_once_with(

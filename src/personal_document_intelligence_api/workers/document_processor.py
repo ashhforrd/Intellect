@@ -9,11 +9,20 @@ from personal_document_intelligence_api.database.models.document import (
 from personal_document_intelligence_api.database.repositories.document import (
     DocumentRepository,
 )
+from personal_document_intelligence_api.database.repositories.document_chunk import (
+    DocumentChunkRepository,
+)
 from personal_document_intelligence_api.database.repositories.document_section import (
     DocumentSectionRepository,
 )
 from personal_document_intelligence_api.documents.service import (
     DocumentExtractionService,
+)
+from personal_document_intelligence_api.retrieval.chunking import (
+    chunk_document_sections,
+)
+from personal_document_intelligence_api.retrieval.embeddings.base import (
+    EmbeddingProvider,
 )
 from personal_document_intelligence_api.storage.base import FileStorage
 
@@ -30,12 +39,16 @@ class DocumentProcessor:
         storage: FileStorage,
         extraction_service: DocumentExtractionService,
         section_repository: DocumentSectionRepository,
+        chunk_repository: DocumentChunkRepository,
+        embedding_provider: EmbeddingProvider,
     ) -> None:
         self.session = session
         self.repository = repository
         self.storage = storage
         self.extraction_service = extraction_service
         self.section_repository = section_repository
+        self.chunk_repository = chunk_repository
+        self.embedding_provider = embedding_provider
 
     async def process(self, document_id: UUID) -> bool:
         document = await self.repository.get_by_id_internal(document_id)
@@ -64,6 +77,19 @@ class DocumentProcessor:
             await self.section_repository.replace_for_document(
                 document.id,
                 parsed_document.sections,
+            )
+
+            chunks = chunk_document_sections(parsed_document.sections)
+
+            embeddings = await asyncio.to_thread(
+                self.embedding_provider.embed_texts,
+                [chunk.text for chunk in chunks],
+            )
+
+            await self.chunk_repository.replace_for_document(
+                document.id,
+                chunks,
+                embeddings,
             )
 
             await self.repository.mark_ready(

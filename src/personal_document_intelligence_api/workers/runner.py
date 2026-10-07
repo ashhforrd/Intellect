@@ -6,6 +6,9 @@ from uuid import UUID
 from personal_document_intelligence_api.database.repositories.document import (
     DocumentRepository,
 )
+from personal_document_intelligence_api.database.repositories.document_chunk import (
+    DocumentChunkRepository,
+)
 from personal_document_intelligence_api.database.repositories.document_section import (
     DocumentSectionRepository,
 )
@@ -15,6 +18,9 @@ from personal_document_intelligence_api.documents.service import (
     DocumentExtractionService,
 )
 from personal_document_intelligence_api.jobs.factory import create_job_queue
+from personal_document_intelligence_api.retrieval.embeddings.factory import (
+    create_embedding_provider,
+)
 from personal_document_intelligence_api.storage.factory import create_file_storage
 from personal_document_intelligence_api.workers.document_processor import (
     DocumentProcessingError,
@@ -36,6 +42,7 @@ async def run_worker() -> None:
 
     while True:
         messages = await asyncio.to_thread(queue.receive_messages)
+        embedding_provider = create_embedding_provider()
 
         for message in messages:
             try:
@@ -47,8 +54,10 @@ async def run_worker() -> None:
                         session=session,
                         repository=DocumentRepository(session),
                         section_repository=DocumentSectionRepository(session),
+                        chunk_repository=DocumentChunkRepository(session),
                         storage=storage,
                         extraction_service=extraction_service,
+                        embedding_provider=embedding_provider,
                     )
 
                     await processor.process(document_id)
