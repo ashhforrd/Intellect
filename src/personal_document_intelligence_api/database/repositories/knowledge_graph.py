@@ -3,13 +3,16 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from personal_document_intelligence_api.database.models.document import Document
 from personal_document_intelligence_api.database.models.knowledge_graph import (
     KnowledgeConceptRecord,
     KnowledgeGraphRecord,
     KnowledgeRelationRecord,
 )
 from personal_document_intelligence_api.knowledge.models import (
+    KnowledgeConcept,
     KnowledgeGraph,
+    KnowledgeRelation,
 )
 
 
@@ -61,3 +64,65 @@ class KnowledgeGraphRepository:
 
         self.session.add_all([*concept_records, *relation_records])
         await self.session.flush()
+
+    async def get_for_document(
+        self,
+        *,
+        document_id: UUID,
+        owner_id: str,
+    ) -> KnowledgeGraph | None:
+        graph_statement = (
+            select(KnowledgeGraphRecord)
+            .join(
+                Document,
+                Document.id == KnowledgeGraphRecord.document_id,
+            )
+            .where(
+                KnowledgeGraphRecord.document_id == document_id,
+                Document.owner_id == owner_id,
+            )
+        )
+        graph_result = await self.session.execute(graph_statement)
+        graph_record = graph_result.scalar_one_or_none()
+
+        if graph_record is None:
+            return None
+
+        concepts_statement = (
+            select(KnowledgeConceptRecord)
+            .where(KnowledgeConceptRecord.graph_id == graph_record.id)
+            .order_by(KnowledgeConceptRecord.concept_key)
+        )
+        relations_statement = (
+            select(KnowledgeRelationRecord)
+            .where(KnowledgeRelationRecord.graph_id == graph_record.id)
+            .order_by(
+                KnowledgeRelationRecord.source_key,
+                KnowledgeRelationRecord.target_key,
+                KnowledgeRelationRecord.label,
+            )
+        )
+
+        concepts_result = await self.session.execute(concepts_statement)
+        relations_result = await self.session.execute(relations_statement)
+
+        return KnowledgeGraph(
+            concepts=tuple(
+                KnowledgeConcept(
+                    id=record.concept_key,
+                    label=record.label,
+                    description=record.description,
+                    source_chunk_ids=tuple(record.source_chunk_ids),
+                )
+                for record in concepts_result.scalars().all()
+            ),
+            relations=tuple(
+                KnowledgeRelation(
+                    source_id=record.source_key,
+                    target_id=record.target_key,
+                    label=record.label,
+                    source_chunk_ids=tuple(record.source_chunk_ids),
+                )
+                for record in relations_result.scalars().all()
+            ),
+        )

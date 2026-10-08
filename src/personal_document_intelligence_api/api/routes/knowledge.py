@@ -40,6 +40,9 @@ from personal_document_intelligence_api.knowledge.base import (
 from personal_document_intelligence_api.knowledge.extractor import (
     KnowledgeGraphExtractionError,
 )
+from personal_document_intelligence_api.knowledge.models import (
+    KnowledgeGraph,
+)
 from personal_document_intelligence_api.knowledge.service import (
     DocumentHasNoChunksError,
     KnowledgeGraphService,
@@ -49,6 +52,31 @@ from personal_document_intelligence_api.knowledge.validation import (
 )
 
 router = APIRouter(prefix="/documents", tags=["knowledge"])
+
+
+def build_knowledge_graph_response(
+    graph: KnowledgeGraph,
+) -> KnowledgeGraphResponse:
+    return KnowledgeGraphResponse(
+        concepts=[
+            KnowledgeConceptResponse(
+                id=concept.id,
+                label=concept.label,
+                description=concept.description,
+                source_chunk_ids=list(concept.source_chunk_ids),
+            )
+            for concept in graph.concepts
+        ],
+        relations=[
+            KnowledgeRelationResponse(
+                source_id=relation.source_id,
+                target_id=relation.target_id,
+                label=relation.label,
+                source_chunk_ids=list(relation.source_chunk_ids),
+            )
+            for relation in graph.relations
+        ],
+    )
 
 
 @router.post(
@@ -121,23 +149,4 @@ async def generate_knowledge_graph(
             detail="Generated knowledge graph is invalid",
         ) from error
 
-    return KnowledgeGraphResponse(
-        concepts=[
-            KnowledgeConceptResponse(
-                id=concept.id,
-                label=concept.label,
-                description=concept.description,
-                source_chunk_ids=list(concept.source_chunk_ids),
-            )
-            for concept in graph.concepts
-        ],
-        relations=[
-            KnowledgeRelationResponse(
-                source_id=relation.source_id,
-                target_id=relation.target_id,
-                label=relation.label,
-                source_chunk_ids=list(relation.source_chunk_ids),
-            )
-            for relation in graph.relations
-        ],
-    )
+    return build_knowledge_graph_response(graph)
