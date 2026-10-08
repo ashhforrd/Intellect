@@ -11,6 +11,9 @@ from personal_document_intelligence_api.api.dependencies.auth import (
 from personal_document_intelligence_api.api.dependencies.knowledge import (
     get_knowledge_graph_extractor,
 )
+from personal_document_intelligence_api.api.dependencies.rate_limit import (
+    enforce_expensive_rate_limit,
+)
 from personal_document_intelligence_api.api.schemas.knowledge import (
     ConversationGraphRequest,
     KnowledgeConceptResponse,
@@ -86,7 +89,7 @@ def build_knowledge_graph_response(
 @conversation_router.post(
     "/conversation-graph",
     response_model=KnowledgeGraphResponse,
-    dependencies=[Depends(get_current_owner_id)],
+    dependencies=[Depends(enforce_expensive_rate_limit)],
 )
 async def generate_conversation_graph(
     request: ConversationGraphRequest,

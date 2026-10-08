@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     knowledge_graph_model: str = "gpt-6-luna"
     knowledge_graph_max_concepts: int = 20
     knowledge_graph_max_chunks: int = 30
+    anonymous_session_secret: SecretStr | None = None
+    anonymous_session_cookie: str = "intellect_session"
+    anonymous_session_max_age_seconds: int = 60 * 60 * 24 * 30
+    expensive_rate_limit_requests: int = 20
+    expensive_rate_limit_window_seconds: int = 60 * 60
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

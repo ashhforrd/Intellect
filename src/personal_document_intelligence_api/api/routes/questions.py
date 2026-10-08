@@ -12,6 +12,9 @@ from personal_document_intelligence_api.api.dependencies.embeddings import (
 from personal_document_intelligence_api.api.dependencies.generation import (
     get_answer_generator,
 )
+from personal_document_intelligence_api.api.dependencies.rate_limit import (
+    enforce_expensive_rate_limit,
+)
 from personal_document_intelligence_api.api.schemas.questions import (
     QuestionRequest,
     QuestionResponse,
@@ -69,6 +72,10 @@ async def ask_question(
     settings: Annotated[
         Settings,
         Depends(get_settings),
+    ],
+    rate_limit_guard: Annotated[
+        None,
+        Depends(enforce_expensive_rate_limit),
     ],
 ) -> QuestionResponse:
     search_service = SemanticSearchService(

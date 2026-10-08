@@ -33,7 +33,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   let response: Response
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, { ...options, headers })
+    response = await fetch(`${apiBaseUrl}${path}`, { ...options, headers, credentials: 'include' })
   } catch {
     throw new ApiError('Cannot connect to the document intelligence API.', 0)
   }
@@ -48,7 +48,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 async function requestBlob(path: string): Promise<Blob> {
-  const response = await fetch(`${apiBaseUrl}${path}`)
+  const response = await fetch(`${apiBaseUrl}${path}`, { credentials: 'include' })
   if (!response.ok) throw new ApiError(`Request failed with status ${response.status}.`, response.status)
   return response.blob()
 }

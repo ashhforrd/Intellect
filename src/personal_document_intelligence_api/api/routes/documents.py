@@ -20,6 +20,9 @@ from personal_document_intelligence_api.api.dependencies.auth import (
     get_current_owner_id,
 )
 from personal_document_intelligence_api.api.dependencies.jobs import get_job_queue
+from personal_document_intelligence_api.api.dependencies.rate_limit import (
+    enforce_expensive_rate_limit,
+)
 from personal_document_intelligence_api.api.dependencies.storage import (
     get_file_storage,
 )
@@ -147,6 +150,10 @@ async def upload_document(
     owner_id: Annotated[
         str,
         Depends(get_current_owner_id),
+    ],
+    rate_limit_guard: Annotated[
+        None,
+        Depends(enforce_expensive_rate_limit),
     ],
 ) -> DocumentResponse:
     try:
