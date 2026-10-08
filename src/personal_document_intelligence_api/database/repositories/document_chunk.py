@@ -86,3 +86,28 @@ class DocumentChunkRepository:
             )
             for chunk, cosine_distance in result.all()
         ]
+
+    async def list_for_document(
+        self,
+        *,
+        document_id: UUID,
+        owner_id: str,
+        limit: int,
+    ) -> Sequence[DocumentChunk]:
+        statement = (
+            select(DocumentChunk)
+            .join(
+                Document,
+                Document.id == DocumentChunk.document_id,
+            )
+            .where(
+                DocumentChunk.document_id == document_id,
+                Document.owner_id == owner_id,
+            )
+            .order_by(DocumentChunk.position)
+            .limit(limit)
+        )
+
+        result = await self.session.execute(statement)
+
+        return result.scalars().all()
