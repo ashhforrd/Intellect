@@ -1,8 +1,13 @@
 import asyncio
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from personal_document_intelligence_api.database.repositories.document_chunk import (
     DocumentChunkRepository,
+)
+from personal_document_intelligence_api.database.repositories.knowledge_graph import (
+    KnowledgeGraphRepository,
 )
 from personal_document_intelligence_api.knowledge.base import (
     KnowledgeGraphExtractor,
@@ -20,11 +25,15 @@ class DocumentHasNoChunksError(ValueError):
 class KnowledgeGraphService:
     def __init__(
         self,
+        session: AsyncSession,
         repository: DocumentChunkRepository,
+        graph_repository: KnowledgeGraphRepository,
         extractor: KnowledgeGraphExtractor,
         max_chunks: int,
     ) -> None:
+        self.session = session
         self.repository = repository
+        self.graph_repository = graph_repository
         self.extractor = extractor
         self.max_chunks = max_chunks
 
@@ -51,7 +60,19 @@ class KnowledgeGraphService:
             for chunk in chunks
         ]
 
-        return await asyncio.to_thread(
+        graph = await asyncio.to_thread(
             self.extractor.extract,
             sources,
         )
+
+        try:
+            await self.graph_repository.replace_for_document(
+                document_id,
+                graph,
+            )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+
+        return graph

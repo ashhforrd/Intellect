@@ -2,12 +2,16 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from personal_document_intelligence_api.database.models.document_chunk import (
     DocumentChunk,
 )
 from personal_document_intelligence_api.database.repositories.document_chunk import (
     DocumentChunkRepository,
+)
+from personal_document_intelligence_api.database.repositories.knowledge_graph import (
+    KnowledgeGraphRepository,
 )
 from personal_document_intelligence_api.knowledge.base import (
     KnowledgeGraphExtractor,
@@ -43,9 +47,13 @@ async def test_generate_knowledge_graph_from_document_chunks() -> None:
 
     repository.list_for_document.return_value = [chunk]
     extractor.extract.return_value = expected_graph
+    session = AsyncMock(spec=AsyncSession)
+    graph_repository = AsyncMock(spec=KnowledgeGraphRepository)
 
     service = KnowledgeGraphService(
+        session=session,
         repository=repository,
+        graph_repository=graph_repository,
         extractor=extractor,
         max_chunks=30,
     )
@@ -62,15 +70,25 @@ async def test_generate_knowledge_graph_from_document_chunks() -> None:
         limit=30,
     )
 
+    graph_repository.replace_for_document.assert_awaited_once_with(
+        document_id,
+        expected_graph,
+    )
+    session.commit.assert_awaited_once()
+
 
 @pytest.mark.asyncio
 async def test_reject_document_without_chunks() -> None:
     repository = AsyncMock(spec=DocumentChunkRepository)
     extractor = Mock(spec=KnowledgeGraphExtractor)
     repository.list_for_document.return_value = []
+    session = AsyncMock(spec=AsyncSession)
+    graph_repository = AsyncMock(spec=KnowledgeGraphRepository)
 
     service = KnowledgeGraphService(
+        session=session,
         repository=repository,
+        graph_repository=graph_repository,
         extractor=extractor,
         max_chunks=30,
     )
@@ -82,3 +100,5 @@ async def test_reject_document_without_chunks() -> None:
         )
 
     extractor.extract.assert_not_called()
+    graph_repository.replace_for_document.assert_not_awaited()
+    session.commit.assert_not_awaited()

@@ -28,6 +28,9 @@ from personal_document_intelligence_api.database.repositories.document import (
 from personal_document_intelligence_api.database.repositories.document_chunk import (
     DocumentChunkRepository,
 )
+from personal_document_intelligence_api.database.repositories.knowledge_graph import (
+    KnowledgeGraphRepository,
+)
 from personal_document_intelligence_api.database.session import (
     get_database_session,
 )
@@ -90,7 +93,9 @@ async def generate_knowledge_graph(
         )
 
     service = KnowledgeGraphService(
+        session=session,
         repository=DocumentChunkRepository(session),
+        graph_repository=KnowledgeGraphRepository(session),
         extractor=extractor,
         max_chunks=settings.knowledge_graph_max_chunks,
     )
