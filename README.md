@@ -16,7 +16,7 @@ pgvector, and retrieval-augmented generation.
 <div>
   <a href="https://www.loom.com/share/8e08ae31ac224651be131ef4e2ec05fa">
     <img
-      src="https://www.loom.com/v1/videos/8e08ae31ac224651be131ef4e2ec05fa/thumbnail.gif"
+      src="Thumbnail.png"
       alt="Watch the Intellect document intelligence demo"
       width="900"
     />
