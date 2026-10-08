@@ -1,0 +1,17 @@
+{
+  "name": "Intellect — Document Intelligence",
+  "short_name": "Intellect",
+  "description": "Grounded document intelligence with semantic retrieval, citations, and knowledge graphs.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
