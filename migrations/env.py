@@ -9,6 +9,9 @@ from personal_document_intelligence_api.database.models import (  # noqa: F401
     Document,
     DocumentChunk,
     DocumentSection,
+    KnowledgeConceptRecord,
+    KnowledgeGraphRecord,
+    KnowledgeRelationRecord,
 )
 
 config = context.config
