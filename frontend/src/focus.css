@@ -1,0 +1,9 @@
+button:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+.aui-composer:focus-within {
+  border-color: #d9dee6;
+  box-shadow: 0 8px 30px #26324712;
+}

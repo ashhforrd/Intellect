@@ -1,0 +1,239 @@
+:root {
+  color-scheme: dark;
+  color: #e5eaf2;
+  background: #0b0e14;
+}
+
+body,
+.app {
+  background: #0b0e14;
+  color: #e5eaf2;
+}
+
+.sidebar {
+  border-color: #242a34;
+  background: #11151d;
+}
+
+.brand,
+.sidebar-bottom b {
+  color: #f2f5f9;
+}
+
+.brand > span {
+  color: #ffffff;
+  background: #3b73da;
+}
+
+.icon-button,
+.nav,
+.history > button,
+.sidebar-bottom svg {
+  color: #8994a6;
+}
+
+.icon-button:hover,
+.history > button:hover,
+.history > button.active {
+  color: #edf2fa;
+  background: #202631;
+}
+
+.new-chat {
+  border-color: #303744;
+  color: #dfe5ee;
+  background: #191e27;
+  box-shadow: none;
+}
+
+.new-chat:hover {
+  border-color: #3b73da;
+}
+
+.history > p,
+.sidebar-bottom small {
+  color: #697487;
+}
+
+.sidebar-bottom {
+  border-color: #242a34;
+}
+
+.avatar {
+  color: #9bbcf7;
+  background: #202f48;
+}
+
+main,
+header {
+  background: #0b0e14;
+}
+
+header {
+  border-color: #202630;
+}
+
+.workspace {
+  color: #9aa5b7;
+}
+
+.graph-toggle {
+  border-color: #2b323e;
+  color: #9aa5b7;
+  background: #141922;
+}
+
+.graph-toggle:hover,
+.graph-toggle.active {
+  border-color: #3b73da;
+  color: #a9c7ff;
+  background: #17243a;
+}
+
+.aui-welcome > span {
+  color: #ffffff;
+  background: #3b73da;
+  box-shadow: 0 8px 25px #244f9f4d;
+}
+
+.aui-welcome h1 {
+  color: #edf1f7;
+}
+
+.aui-welcome p {
+  color: #7f8a9c;
+}
+
+.aui-welcome > div button {
+  border-color: #2c333f;
+  color: #a0aabd;
+  background: #141922;
+}
+
+.aui-welcome > div button:hover {
+  border-color: #3b73da;
+  color: #b9d0fa;
+  background: #17243a;
+}
+
+.assistant-mark {
+  color: #8fb4f5;
+  background: #17243a;
+}
+
+.assistant-message .message-content {
+  color: #c8d0dc;
+}
+
+.user-message .message-content,
+.send {
+  color: #ffffff;
+  background: #3b73da;
+}
+
+.aui-footer {
+  background: linear-gradient(transparent, #0b0e14 24%);
+}
+
+.aui-composer,
+.aui-composer:focus-within {
+  border-color: #303744;
+  background: #151a23;
+  box-shadow: 0 10px 35px #00000047;
+}
+
+.aui-input {
+  color: #e4e9f1;
+}
+
+.aui-input::placeholder,
+.composer-actions .model,
+.aui-footer > small {
+  color: #737f91;
+}
+
+.composer-actions .model:hover {
+  color: #b4bfce;
+  background: #202630;
+}
+
+.send:disabled {
+  color: #626d7d;
+  background: #242a34;
+}
+
+.send.cancel {
+  background: #303744;
+}
+
+.graph-panel {
+  border-color: #242a34;
+  background: #0f131a;
+}
+
+.graph-header,
+.graph-info {
+  border-color: #242a34;
+  background: #141922;
+}
+
+.graph-header b,
+.graph-info span {
+  color: #e5eaf2;
+}
+
+.graph-header small,
+.graph-info small {
+  color: #747f90;
+}
+
+.graph-canvas::before {
+  background-image: radial-gradient(#303744 1px, transparent 1px);
+}
+
+.graph-canvas line {
+  stroke: #364052;
+}
+
+.node {
+  border-color: #35435a;
+  color: #a9c7ff;
+  background: #172033;
+  box-shadow: 0 5px 16px #0000004d;
+}
+
+.node-0 {
+  border-color: #3b73da;
+  color: #ffffff;
+  background: #3b73da;
+}
+
+.node-4 {
+  border-color: #353d49;
+  color: #a9b2c0;
+  background: #1a2029;
+}
+
+.graph-info > div + div {
+  border-color: #292f39;
+}
+
+.open-graph {
+  border-color: #303744;
+  color: #b0bac9;
+  background: #191e27;
+}
+
+.open-graph:hover {
+  border-color: #3b73da;
+  color: #c4d8fc;
+}
+
+.mobile-overlay {
+  background: #05070bbf;
+}
+
+::selection {
+  color: #ffffff;
+  background: #315fae;
+}

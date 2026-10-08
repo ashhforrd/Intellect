@@ -1,5 +1,6 @@
+import asyncio
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,7 @@ from personal_document_intelligence_api.api.dependencies.knowledge import (
     get_knowledge_graph_extractor,
 )
 from personal_document_intelligence_api.api.schemas.knowledge import (
+    ConversationGraphRequest,
     KnowledgeConceptResponse,
     KnowledgeGraphResponse,
     KnowledgeRelationResponse,
@@ -42,6 +44,7 @@ from personal_document_intelligence_api.knowledge.extractor import (
 )
 from personal_document_intelligence_api.knowledge.models import (
     KnowledgeGraph,
+    KnowledgeSource,
 )
 from personal_document_intelligence_api.knowledge.service import (
     DocumentHasNoChunksError,
@@ -52,6 +55,7 @@ from personal_document_intelligence_api.knowledge.validation import (
 )
 
 router = APIRouter(prefix="/documents", tags=["knowledge"])
+conversation_router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
 
 def build_knowledge_graph_response(
@@ -77,6 +81,75 @@ def build_knowledge_graph_response(
             for relation in graph.relations
         ],
     )
+
+
+@conversation_router.post(
+    "/conversation-graph",
+    response_model=KnowledgeGraphResponse,
+    dependencies=[Depends(get_current_owner_id)],
+)
+async def generate_conversation_graph(
+    request: ConversationGraphRequest,
+    extractor: Annotated[
+        KnowledgeGraphExtractor,
+        Depends(get_knowledge_graph_extractor),
+    ],
+) -> KnowledgeGraphResponse:
+    contexts = [
+        KnowledgeSource(
+            chunk_id=uuid4(),
+            text=f"User question: {turn.question}\nGrounded answer: {turn.answer}",
+        )
+        for turn in request.turns
+    ]
+
+    try:
+        graph = await asyncio.to_thread(extractor.extract, contexts)
+    except KnowledgeGraphExtractionError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Conversation graph generation is unavailable",
+        ) from error
+    except InvalidKnowledgeGraphError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Generated conversation graph is invalid",
+        ) from error
+
+    return build_knowledge_graph_response(graph)
+
+
+@router.get(
+    "/{document_id}/knowledge-graph",
+    response_model=KnowledgeGraphResponse,
+)
+async def get_knowledge_graph(
+    document_id: UUID,
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> KnowledgeGraphResponse:
+    document_repository = DocumentRepository(session)
+    document = await document_repository.get_by_id(
+        document_id=document_id,
+        owner_id=owner_id,
+    )
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    graph = await KnowledgeGraphRepository(session).get_for_document(
+        document_id=document.id,
+        owner_id=owner_id,
+    )
+    if graph is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Knowledge graph has not been generated",
+        )
+
+    return build_knowledge_graph_response(graph)
 
 
 @router.post(

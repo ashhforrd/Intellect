@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class KnowledgeConceptResponse(BaseModel):
@@ -20,3 +20,12 @@ class KnowledgeRelationResponse(BaseModel):
 class KnowledgeGraphResponse(BaseModel):
     concepts: list[KnowledgeConceptResponse]
     relations: list[KnowledgeRelationResponse]
+
+
+class ConversationTurnRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=4000)
+    answer: str = Field(min_length=1, max_length=12000)
+
+
+class ConversationGraphRequest(BaseModel):
+    turns: list[ConversationTurnRequest] = Field(min_length=1, max_length=20)

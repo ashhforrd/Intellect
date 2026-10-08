@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import Annotated
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -314,6 +316,40 @@ async def delete_document(
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{document_id}/content")
+async def get_document_content(
+    document_id: UUID,
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    storage: Annotated[FileStorage, Depends(get_file_storage)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> StreamingResponse:
+    repository = DocumentRepository(session)
+    document = await repository.get_by_id(document_id=document_id, owner_id=owner_id)
+    if document is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    media_types = {
+        "pdf": "application/pdf",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "md": "text/markdown; charset=utf-8",
+        "txt": "text/plain; charset=utf-8",
+    }
+    try:
+        content = await run_in_threadpool(storage.read, document.storage_key)
+    except StorageError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Document storage is unavailable",
+        ) from error
+
+    disposition = "inline" if document.file_type in {"pdf", "md", "txt"} else "attachment"
+    return StreamingResponse(
+        BytesIO(content),
+        media_type=media_types.get(document.file_type, "application/octet-stream"),
+        headers={"Content-Disposition": f'{disposition}; filename="{document.filename}"'},
+    )
 
 
 @router.get(
