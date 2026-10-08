@@ -5,25 +5,22 @@ from uuid import uuid4
 from personal_document_intelligence_api.knowledge.extractor import (
     OpenAIKnowledgeGraphExtractor,
 )
+from personal_document_intelligence_api.knowledge.models import (
+    KnowledgeSource,
+)
 from personal_document_intelligence_api.knowledge.schemas import (
     ExtractedConcept,
     ExtractedRelation,
     KnowledgeGraphExtraction,
-)
-from personal_document_intelligence_api.retrieval.models import (
-    SemanticSearchResult,
 )
 
 
 def test_extract_knowledge_graph() -> None:
     client = Mock()
     chunk_id = uuid4()
-    context = SemanticSearchResult(
+    context = KnowledgeSource(
         chunk_id=chunk_id,
-        document_id=uuid4(),
         text="Dynamic programming uses states and transitions.",
-        page_number=1,
-        score=0.9,
     )
     client.responses.parse.return_value = SimpleNamespace(
         output_parsed=KnowledgeGraphExtraction(

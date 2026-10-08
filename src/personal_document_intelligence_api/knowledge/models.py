@@ -22,3 +22,9 @@ class KnowledgeRelation:
 class KnowledgeGraph:
     concepts: tuple[KnowledgeConcept, ...]
     relations: tuple[KnowledgeRelation, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class KnowledgeSource:
+    chunk_id: UUID
+    text: str

@@ -8,15 +8,13 @@ from personal_document_intelligence_api.knowledge.models import (
     KnowledgeConcept,
     KnowledgeGraph,
     KnowledgeRelation,
+    KnowledgeSource,
 )
 from personal_document_intelligence_api.knowledge.schemas import (
     KnowledgeGraphExtraction,
 )
 from personal_document_intelligence_api.knowledge.validation import (
     validate_knowledge_graph,
-)
-from personal_document_intelligence_api.retrieval.models import (
-    SemanticSearchResult,
 )
 
 
@@ -37,7 +35,7 @@ class OpenAIKnowledgeGraphExtractor:
 
     def extract(
         self,
-        contexts: Sequence[SemanticSearchResult],
+        contexts: Sequence[KnowledgeSource],
     ) -> KnowledgeGraph:
         if not contexts:
             raise KnowledgeGraphExtractionError("At least one source chunk is required")
@@ -102,7 +100,7 @@ class OpenAIKnowledgeGraphExtractor:
     @staticmethod
     def resolve_source_chunk_ids(
         source_numbers: Sequence[int],
-        contexts: Sequence[SemanticSearchResult],
+        contexts: Sequence[KnowledgeSource],
     ) -> tuple[UUID, ...]:
         chunk_ids: list[UUID] = []
 
