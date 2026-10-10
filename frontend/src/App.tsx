@@ -35,7 +35,6 @@ function LoginScreen({ externalError }: { externalError: string | null }) {
         <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         {(error || externalError) && <p className="login-error">{error || externalError}</p>}
         <button type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
-        <div className="demo-accounts"><span>Demo accounts</span>{['lucas@intellect.id', 'kezia@intellect.id', 'atqiya@intellect.id'].map((account) => <button type="button" key={account} onClick={() => setEmail(account)}>{account}</button>)}</div>
       </form>
     </section>
   </main>
