@@ -57,15 +57,15 @@ header { height: 68px; padding-inline: 24px; }
 .aui-welcome p { color: #999; font-size: 14px; }
 .aui-welcome > div button { padding: 10px 14px; border-color: #333; color: #bbb; background: #111; font-size: 12px; }
 .aui-welcome > div button:hover { color: #fff; border-color: #777; background: #181818; }
-.message { max-width: 920px; padding-block: 20px; gap: 14px; font-size: 16px; line-height: 1.6; }
+.message { max-width: 920px; padding-block: 15px; gap: 14px; font-size: 16px; line-height: 1.55; }
 .user-message .message-content { padding: 11px 15px; color: #111; background: #eee; }
 .assistant-mark { width: 32px; height: 32px; color: #111; background: #eee; }
-.assistant-message .message-content { max-width: 90%; color: #dedede; font-size: 16px; }
-.markdown-answer { color: #dedede; font-size: 16px; line-height: 1.6; }
-.markdown-answer p { margin-bottom: 8px; }
-.markdown-answer ul, .markdown-answer ol { margin-bottom: 10px; }
-.markdown-answer li { margin-block: 2px; }
-.markdown-answer li + li { margin-top: 10px; }
+.assistant-message .message-content { max-width: 90%; color: #dedede; font-size: 16px; white-space: normal; }
+.markdown-answer { color: #dedede; font-size: 16px; line-height: 1.5; }
+.markdown-answer p { margin-bottom: 6px; }
+.markdown-answer ul, .markdown-answer ol { margin-block: 2px 8px; }
+.markdown-answer li { margin-block: 1px; }
+.markdown-answer li + li { margin-top: 4px; }
 .markdown-answer li > p { margin: 0; }
 .markdown-answer h1 { font-size: 23px; }
 .markdown-answer h2, .markdown-answer h3 { font-size: 19px; }

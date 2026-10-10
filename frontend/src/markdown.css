@@ -1,10 +1,12 @@
-.markdown-answer { color: #c8d0dc; font-size: 10px; line-height: 1.85; }
+.markdown-answer { color: #c8d0dc; font-size: 10px; line-height: 1.55; }
 .markdown-answer > *:first-child { margin-top: 0; }
-.markdown-answer p { margin: 0 0 12px; }
-.markdown-answer h1, .markdown-answer h2, .markdown-answer h3 { margin: 18px 0 8px; color: #eef3f9; font-size: 13px; line-height: 1.4; }
+.markdown-answer p { margin: 0 0 7px; }
+.markdown-answer h1, .markdown-answer h2, .markdown-answer h3 { margin: 13px 0 6px; color: #eef3f9; font-size: 13px; line-height: 1.35; }
 .markdown-answer h1 { font-size: 16px; }
-.markdown-answer ul, .markdown-answer ol { margin: 0 0 12px; padding-left: 20px; }
-.markdown-answer li { margin: 4px 0; }
+.markdown-answer ul, .markdown-answer ol { margin: 2px 0 8px; padding-left: 20px; }
+.markdown-answer li { margin: 1px 0; }
+.markdown-answer li + li { margin-top: 4px; }
+.markdown-answer li > p { margin: 0; }
 .markdown-answer strong { color: #f0f4fa; }
 .markdown-answer code { padding: 2px 4px; border-radius: 4px; color: #b8d1ff; background: #202b3c; font-size: 9px; }
 .markdown-answer pre { overflow: auto; margin: 12px 0; padding: 12px; border: 1px solid #303a48; border-radius: 8px; background: #121721; }

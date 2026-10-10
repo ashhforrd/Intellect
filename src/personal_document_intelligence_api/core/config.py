@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
     generation_model: str = "gpt-6-luna"
-    generation_max_output_tokens: int = 800
+    generation_max_output_tokens: int = 2400
     rag_minimum_score: float = 0.25
     knowledge_graph_model: str = "gpt-6-luna"
     knowledge_graph_max_concepts: int = 20
