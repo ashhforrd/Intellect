@@ -6,6 +6,7 @@ from personal_document_intelligence_api.core.config import (
 from .base import FileStorage, StorageError
 from .local import LocalFileStorage
 from .s3 import S3FileStorage
+from .supabase import SupabaseFileStorage
 
 
 class StorageConfigurationError(StorageError):
@@ -20,6 +21,24 @@ def create_file_storage(
     if settings.storage_backend == "local":
         return LocalFileStorage(
             root_directory=settings.local_storage_path,
+        )
+
+    if settings.storage_backend == "supabase":
+        if not all(
+            (
+                settings.supabase_url,
+                settings.supabase_service_role_key,
+                settings.supabase_storage_bucket,
+            )
+        ):
+            raise StorageConfigurationError(
+                "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and "
+                "SUPABASE_STORAGE_BUCKET are required when STORAGE_BACKEND=supabase"
+            )
+        return SupabaseFileStorage(
+            project_url=settings.supabase_url,
+            service_role_key=settings.supabase_service_role_key.get_secret_value(),
+            bucket_name=settings.supabase_storage_bucket,
         )
 
     if not settings.s3_bucket_name:

@@ -9,6 +9,7 @@ from .factory import (
 )
 from .local import LocalFileStorage
 from .s3 import S3FileStorage
+from .supabase import SupabaseFileStorage
 
 __all__ = [
     "FileStorage",
@@ -16,6 +17,7 @@ __all__ = [
     "StorageError",
     "StoredFileNotFoundError",
     "S3FileStorage",
+    "SupabaseFileStorage",
     "StorageConfigurationError",
     "create_file_storage",
 ]

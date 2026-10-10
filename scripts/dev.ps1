@@ -88,12 +88,22 @@ if (-not (Test-Path $EnvFile)) {
     exit 0
 }
 
-$requiredSettings = @("OPENAI_API_KEY")
+$requiredSettings = @("OPENAI_API_KEY", "DATABASE_URL")
 if ((Get-EnvFileValue "JOB_QUEUE_BACKEND") -eq "sqs") {
     $requiredSettings += "SQS_QUEUE_URL"
 }
+if ((Get-EnvFileValue "JOB_QUEUE_BACKEND") -eq "redis") {
+    $requiredSettings += "REDIS_URL"
+}
 if ((Get-EnvFileValue "STORAGE_BACKEND") -eq "s3") {
     $requiredSettings += "S3_BUCKET_NAME"
+}
+if ((Get-EnvFileValue "STORAGE_BACKEND") -eq "supabase") {
+    $requiredSettings += @(
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_STORAGE_BUCKET"
+    )
 }
 $missingSettings = @($requiredSettings | Where-Object { -not (Test-ConfiguredValue $_) })
 if ($missingSettings.Count -gt 0) {
@@ -127,9 +137,18 @@ try {
         Assert-LastCommand "Frontend dependency installation"
     }
 
-    Write-Host "Starting PostgreSQL..."
-    & docker compose up -d --wait database
-    Assert-LastCommand "PostgreSQL startup"
+    $databaseUrl = Get-EnvFileValue "DATABASE_URL"
+    if ($databaseUrl -match "localhost|127\.0\.0\.1") {
+        Write-Host "Starting PostgreSQL..."
+        & docker compose up -d --wait database
+        Assert-LastCommand "PostgreSQL startup"
+    }
+
+    if ((Get-EnvFileValue "JOB_QUEUE_BACKEND") -eq "redis") {
+        Write-Host "Starting Redis..."
+        & docker compose up -d --wait redis
+        Assert-LastCommand "Redis startup"
+    }
 
     Write-Host "Applying database migrations..."
     & $uv run alembic upgrade head

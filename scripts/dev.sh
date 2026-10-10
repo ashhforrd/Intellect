@@ -85,8 +85,16 @@ fi
 
 cd "$ROOT_DIR"
 
-echo "Starting PostgreSQL..."
-docker compose up -d --wait database
+database_url="$(grep -E '^DATABASE_URL=' .env | tail -n 1 | cut -d= -f2-)"
+if [[ "$database_url" == *"localhost"* || "$database_url" == *"127.0.0.1"* ]]; then
+  echo "Starting PostgreSQL..."
+  docker compose up -d --wait database
+fi
+
+if grep -Eq '^JOB_QUEUE_BACKEND=redis([[:space:]]*)$' .env; then
+  echo "Starting Redis..."
+  docker compose up -d --wait redis
+fi
 
 echo "Applying database migrations..."
 uv run alembic upgrade head

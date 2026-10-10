@@ -359,16 +359,36 @@ Then update the remaining required database, OpenAI, storage, and queue
 settings. Each developer should generate their own session secret. Never commit
 `.env`, the generated secret, or any real credentials.
 
-Local development uses the filesystem-backed queue by default and does not
-require AWS credentials:
+The default shared-development configuration uses Supabase PostgreSQL,
+Supabase Storage, and a Redis queue:
 
 ```dotenv
+DATABASE_URL=postgresql+psycopg://postgres.PROJECT_REF:PASSWORD@POOLER_HOST:5432/postgres?sslmode=require
+STORAGE_BACKEND=supabase
+SUPABASE_URL=https://PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-key
+SUPABASE_STORAGE_BUCKET=documents
+JOB_QUEUE_BACKEND=redis
+REDIS_URL=redis://localhost:6379/0
+```
+
+Create a private `documents` bucket in Supabase before uploading. Never expose
+the service-role key in frontend code or commit it to Git. The development
+scripts start Redis through Docker automatically when `JOB_QUEUE_BACKEND` is
+`redis`. They start the Docker PostgreSQL service only when `DATABASE_URL`
+points to `localhost` or `127.0.0.1`.
+
+For completely offline development, switch back to the filesystem adapters:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg://app:app@localhost:5432/document_intelligence
+STORAGE_BACKEND=local
+LOCAL_STORAGE_PATH=./data/documents
 JOB_QUEUE_BACKEND=local
 LOCAL_QUEUE_PATH=./data/jobs
 ```
 
-Set `JOB_QUEUE_BACKEND=sqs` and configure `SQS_QUEUE_URL` only when testing the
-AWS queue integration.
+The S3 and SQS adapters remain available for optional AWS deployments.
 
 ### 3. Run database migrations
 
@@ -405,11 +425,11 @@ The frontend is available at <http://localhost:5173>.
 ### Run the complete development stack
 
 Run the script from the repository root. On the first run, it creates `.env`
-from `.env.example` and exits so you can add the OpenAI key, SQS queue URL, and
-other required settings. On later runs, it checks the required tools and
+from `.env.example` and exits so you can add the database, OpenAI, Supabase,
+and queue settings. On later runs, it checks the required tools and
 configuration, syncs Python dependencies, installs frontend dependencies if
-they are missing, starts PostgreSQL, applies migrations, and runs the API,
-document worker, and frontend:
+they are missing, starts the configured local infrastructure, applies
+migrations, and runs the API, document worker, and frontend:
 
 ```bash
 ./scripts/dev.sh
