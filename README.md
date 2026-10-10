@@ -456,6 +456,46 @@ If the script reports an incomplete environment setting, update that key in
 Press `Ctrl+C` to stop the API, worker, and frontend. PostgreSQL remains
 available in Docker so subsequent starts do not need to recreate the database.
 
+### Desktop launchers and app icon
+
+The default desktop launchers live in the repository root and use the owl artwork
+from [`frontend/public/app-icon.png`](frontend/public/app-icon.png):
+
+| Platform | Entry point | Icon |
+| --- | --- | --- |
+| Windows | Double-click `Intellect.lnk` | `scripts/launcher/intellect.ico` |
+| macOS | Double-click `Intellect.app` | ICNS inside the app bundle |
+| Linux | Open `Intellect.desktop` | `frontend/public/app-icon.png` |
+
+The Windows shortcut opens the system PowerShell directly, runs `scripts/dev.ps1`,
+and keeps startup errors visible. You can copy the shortcut to the Desktop while
+keeping the checkout and icon in place. If the checkout moves, update the
+shortcut's Target, Start in, and Change Icon fields through its Properties.
+
+The macOS app opens Terminal and runs `scripts/dev.sh`. The Linux desktop entry
+uses its own location to find `scripts/launcher/intellect.sh`, which delegates to
+`scripts/dev.sh`. Keep the Linux desktop entry in the checkout root. On Linux,
+set its `Icon=` value to the absolute path of this checkout's
+`frontend/public/app-icon.png`, then enable executable permissions:
+
+```bash
+chmod +x Intellect.desktop scripts/launcher/intellect.sh
+```
+
+Some Linux file managers also require marking the desktop launcher as trusted.
+On macOS, if executable permissions were lost during copying, run
+`chmod +x Intellect.app/Contents/MacOS/intellect`. To validate checkout discovery
+without starting services, run `bash scripts/launcher/intellect.sh --check` or
+`bash Intellect.app/Contents/MacOS/intellect --check`.
+
+These launchers require the repository, `.env`, and the prerequisites above.
+Visit `http://localhost:5173` after the stack starts. The custom Windows
+`Intellect.exe`, packaging scripts, duplicate wrappers, and ZIP archive have been
+removed. The root launchers are local artifacts ignored by Git; retain them when
+moving the checkout. System security rules can still restrict PowerShell scripts
+or downloaded unsigned macOS app bundles. See
+[Apple's app security guidance](https://support.apple.com/en-us/102445).
+
 ## Docker
 
 Build the backend image:

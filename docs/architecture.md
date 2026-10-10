@@ -234,6 +234,18 @@ the database, applies migrations, then launches the API, worker, and Vite.
 Ctrl+C cleans up application processes while leaving the Docker database running.
 Open `http://localhost:5173` manually; the launcher has no browser-open command.
 
+Local desktop launchers `Intellect.lnk`, `Intellect.app`, and `Intellect.desktop`
+live in the repository root and are ignored by Git. The Windows shortcut invokes
+the system PowerShell and `scripts/dev.ps1` directly; its icon is
+`scripts/launcher/intellect.ico`. The macOS app bundles its shell launcher, ICNS,
+and AppleScript for opening Terminal. The Linux desktop entry passes its own
+location through `%k` to find `scripts/launcher/intellect.sh`; its icon path is
+machine-specific and must be adjusted on Linux. Shell launchers discover the
+checkout through parent directories or `INTELLECT_ROOT` and delegate startup and
+cleanup to `scripts/dev.sh`. They do not package credentials, dependencies, or a
+production server. The custom Windows executable, build-only packaging scripts,
+duplicate generated wrappers, and ZIP archive have been removed.
+
 Compose defines only PostgreSQL, with persistent Docker volume storage. SQS, S3,
 and OpenAI are external integrations; Compose supplies no local queue emulator.
 The Dockerfile includes OCR dependencies and defaults to the API command. Running

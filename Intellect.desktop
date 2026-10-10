@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Intellect
+Comment=Start the Intellect development stack
+Exec=bash -c "exec bash \\"\\$(dirname \\"\\$1\\")/scripts/launcher/intellect.sh\\"" intellect %k
+Icon=C:\\Users\\reala\\Documents\\Intellect\\frontend\\public\\app-icon.png
+Terminal=true
+Categories=Development;
