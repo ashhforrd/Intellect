@@ -8,6 +8,7 @@ from personal_document_intelligence_api.database.models.document import Document
 from personal_document_intelligence_api.database.models.document_chunk import (
     DocumentChunk,
 )
+from personal_document_intelligence_api.database.models.project import ProjectMember
 from personal_document_intelligence_api.retrieval.models import (
     SemanticSearchResult,
     TextChunk,
@@ -25,6 +26,7 @@ class DocumentChunkRepository:
     async def replace_for_document(
         self,
         document_id: UUID,
+        project_id: UUID,
         chunks: Sequence[TextChunk],
         embeddings: Sequence[Sequence[float]],
     ) -> None:
@@ -37,6 +39,7 @@ class DocumentChunkRepository:
         database_chunks = [
             DocumentChunk(
                 document_id=document_id,
+                project_id=project_id,
                 position=position,
                 section_position=chunk.section_position,
                 chunk_index=chunk.chunk_index,
@@ -54,6 +57,7 @@ class DocumentChunkRepository:
         self,
         *,
         owner_id: str,
+        project_id: UUID,
         query_embedding: Sequence[float],
         limit: int = 5,
         document_id: UUID | None = None,
@@ -63,10 +67,13 @@ class DocumentChunkRepository:
         statement = (
             select(DocumentChunk, distance)
             .join(
-                Document,
-                Document.id == DocumentChunk.document_id,
+                ProjectMember,
+                ProjectMember.project_id == DocumentChunk.project_id,
             )
-            .where(Document.owner_id == owner_id)
+            .where(
+                DocumentChunk.project_id == project_id,
+                ProjectMember.member_id == owner_id,
+            )
             .order_by(distance)
             .limit(limit)
         )
@@ -92,6 +99,7 @@ class DocumentChunkRepository:
         *,
         document_id: UUID,
         owner_id: str,
+        project_id: UUID,
         limit: int,
     ) -> Sequence[DocumentChunk]:
         statement = (
@@ -100,9 +108,15 @@ class DocumentChunkRepository:
                 Document,
                 Document.id == DocumentChunk.document_id,
             )
+            .join(
+                ProjectMember,
+                ProjectMember.project_id == DocumentChunk.project_id,
+            )
             .where(
                 DocumentChunk.document_id == document_id,
-                Document.owner_id == owner_id,
+                DocumentChunk.project_id == project_id,
+                Document.project_id == project_id,
+                ProjectMember.member_id == owner_id,
             )
             .order_by(DocumentChunk.position)
             .limit(limit)

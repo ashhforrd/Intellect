@@ -35,6 +35,7 @@ def create_database_document() -> Document:
     return Document(
         id=uuid4(),
         owner_id="user-123",
+        project_id=uuid4(),
         filename="document.pdf",
         file_type="pdf",
         storage_key="documents/123/document.pdf",
@@ -61,6 +62,7 @@ async def test_upload_commits_database_transaction() -> None:
 
     result = await service.upload(
         owner_id="user-123",
+        project_id=database_document.project_id,
         file_bytes=b"document content",
         document_upload=create_validated_document_upload(),
     )
@@ -89,6 +91,7 @@ async def test_upload_removes_file_when_database_fails() -> None:
     with pytest.raises(RuntimeError):
         await service.upload(
             owner_id="user-123",
+            project_id=uuid4(),
             file_bytes=b"document content",
             document_upload=create_validated_document_upload(),
         )
@@ -120,6 +123,7 @@ async def test_delete_commits_database_transaction() -> None:
     result = await service.delete(
         document_id=document.id,
         owner_id=document.owner_id,
+        project_id=document.project_id,
     )
 
     assert result is True
@@ -149,6 +153,7 @@ async def test_delete_restores_file_when_database_fails() -> None:
         await service.delete(
             document_id=document.id,
             owner_id=document.owner_id,
+            project_id=document.project_id,
         )
 
     session.rollback.assert_awaited_once()

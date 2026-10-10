@@ -28,4 +28,5 @@ class ConversationTurnRequest(BaseModel):
 
 
 class ConversationGraphRequest(BaseModel):
+    project_id: UUID
     turns: list[ConversationTurnRequest] = Field(min_length=1, max_length=20)

@@ -59,6 +59,7 @@ async def semantic_search(
         results = await service.search(
             query=request.query,
             owner_id=owner_id,
+            project_id=request.project_id,
             limit=request.limit,
             document_id=request.document_id,
         )

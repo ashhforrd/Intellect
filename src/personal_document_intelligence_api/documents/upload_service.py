@@ -1,5 +1,5 @@
 import asyncio
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,7 @@ class DocumentUploadService:
         self,
         *,
         owner_id: str,
+        project_id: UUID,
         file_bytes: bytes,
         document_upload: ValidatedDocumentUpload,
     ) -> Document:
@@ -44,6 +45,7 @@ class DocumentUploadService:
 
             document = await self._repository.create(
                 owner_id=owner_id,
+                project_id=project_id,
                 filename=document_upload.filename,
                 file_type=document_upload.file_type,
                 storage_key=storage_key,

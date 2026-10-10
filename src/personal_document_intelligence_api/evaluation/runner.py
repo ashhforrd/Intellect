@@ -3,6 +3,7 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from personal_document_intelligence_api.database.repositories.document_chunk import (
     DocumentChunkRepository,
@@ -42,6 +43,7 @@ async def evaluate(
     *,
     dataset_path: Path,
     owner_id: str,
+    project_id: UUID,
     limit: int,
 ) -> list[RetrievalCaseResult]:
     cases = load_cases(dataset_path)
@@ -59,6 +61,7 @@ async def evaluate(
             retrieved_chunks = await search_service.search(
                 query=case.question,
                 owner_id=owner_id,
+                project_id=project_id,
                 limit=limit,
             )
             evaluation = evaluate_retrieval_case(
@@ -87,6 +90,11 @@ def parse_arguments() -> argparse.Namespace:
         default="local-development-user",
     )
     parser.add_argument(
+        "--project-id",
+        type=UUID,
+        required=True,
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=5,
@@ -101,6 +109,7 @@ async def main() -> None:
     results = await evaluate(
         dataset_path=arguments.dataset,
         owner_id=arguments.owner_id,
+        project_id=arguments.project_id,
         limit=arguments.limit,
     )
 

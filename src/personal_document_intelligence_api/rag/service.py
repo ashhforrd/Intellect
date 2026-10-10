@@ -26,12 +26,14 @@ class RagService:
         *,
         question: str,
         owner_id: str,
+        project_id: UUID,
         document_id: UUID | None = None,
         retrieval_limit: int = 5,
     ) -> RagAnswer:
         retrieved_sources = await self.search_service.search(
             query=question,
             owner_id=owner_id,
+            project_id=project_id,
             limit=retrieval_limit,
             document_id=document_id,
         )

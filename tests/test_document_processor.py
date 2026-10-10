@@ -48,6 +48,7 @@ async def test_process_document_successfully() -> None:
     document = Document(
         id=uuid4(),
         owner_id="user-123",
+        project_id=uuid4(),
         filename="document.pdf",
         file_type="pdf",
         storage_key="documents/123/document.pdf",

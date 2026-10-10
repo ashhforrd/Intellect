@@ -19,6 +19,7 @@ async def test_replace_document_chunks() -> None:
     session = AsyncMock(spec=AsyncSession)
     repository = DocumentChunkRepository(session)
     document_id = uuid4()
+    project_id = uuid4()
     chunks = [
         TextChunk(
             text="First chunk",
@@ -30,6 +31,7 @@ async def test_replace_document_chunks() -> None:
 
     await repository.replace_for_document(
         document_id=document_id,
+        project_id=project_id,
         chunks=chunks,
         embeddings=[[0.1, 0.2]],
     )
@@ -38,6 +40,7 @@ async def test_replace_document_chunks() -> None:
 
     assert len(stored_chunks) == 1
     assert stored_chunks[0].document_id == document_id
+    assert stored_chunks[0].project_id == project_id
     assert stored_chunks[0].text == "First chunk"
     assert list(stored_chunks[0].embedding) == [0.1, 0.2]
     session.flush.assert_awaited_once()
@@ -51,6 +54,7 @@ async def test_reject_mismatched_chunk_and_embedding_counts() -> None:
     with pytest.raises(ChunkEmbeddingCountMismatchError):
         await repository.replace_for_document(
             document_id=uuid4(),
+            project_id=uuid4(),
             chunks=[
                 TextChunk(
                     text="Chunk",
@@ -68,10 +72,12 @@ async def test_semantic_search_maps_distance_to_similarity() -> None:
     session = AsyncMock(spec=AsyncSession)
     query_result = Mock()
     document_id = uuid4()
+    project_id = uuid4()
 
     stored_chunk = DocumentChunk(
         id=uuid4(),
         document_id=document_id,
+        project_id=project_id,
         position=0,
         section_position=0,
         chunk_index=0,
@@ -87,6 +93,7 @@ async def test_semantic_search_maps_distance_to_similarity() -> None:
 
     results = await repository.semantic_search(
         owner_id="user-123",
+        project_id=project_id,
         query_embedding=[0.1, 0.2],
         limit=5,
     )

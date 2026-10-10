@@ -3,6 +3,7 @@ import { api, ApiError } from './api/client'
 import type { DocumentResponse } from './api/types'
 
 interface DocumentState {
+  projectId: string | null
   documents: DocumentResponse[]
   activeDocumentId: string | null
   loading: boolean
@@ -10,8 +11,9 @@ interface DocumentState {
 }
 
 let state: DocumentState = {
+  projectId: null,
   documents: [],
-  activeDocumentId: window.localStorage.getItem('intellect-active-document'),
+  activeDocumentId: null,
   loading: false,
   error: null,
 }
@@ -33,18 +35,26 @@ export const documentStore = {
     listeners.add(listener)
     return () => listeners.delete(listener)
   },
+  async setProject(projectId: string) {
+    const activeDocumentId = window.localStorage.getItem(`intellect-active-document:${projectId}`)
+    update({ projectId, documents: [], activeDocumentId, error: null })
+    await this.load()
+  },
   select(documentId: string | null) {
-    if (documentId) window.localStorage.setItem('intellect-active-document', documentId)
-    else window.localStorage.removeItem('intellect-active-document')
+    if (!state.projectId) return
+    const key = `intellect-active-document:${state.projectId}`
+    if (documentId) window.localStorage.setItem(key, documentId)
+    else window.localStorage.removeItem(key)
     update({ activeDocumentId: documentId })
   },
   async load() {
+    if (!state.projectId) return
     update({ loading: true, error: null })
     try {
-      const documents = await api.documents.list()
+      const documents = await api.documents.list(state.projectId)
       const activeExists = documents.some((item) => item.id === state.activeDocumentId)
       const activeDocumentId = activeExists ? state.activeDocumentId : documents[0]?.id || null
-      if (activeDocumentId) window.localStorage.setItem('intellect-active-document', activeDocumentId)
+      if (activeDocumentId) window.localStorage.setItem(`intellect-active-document:${state.projectId}`, activeDocumentId)
       update({
         documents,
         activeDocumentId,
@@ -55,10 +65,11 @@ export const documentStore = {
     }
   },
   async refreshProcessing() {
+    if (!state.projectId) return
     const pending = state.documents.filter((item) => item.status === 'uploaded' || item.status === 'processing')
     if (pending.length === 0) return
     try {
-      const refreshed = await Promise.all(pending.map((item) => api.documents.get(item.id)))
+      const refreshed = await Promise.all(pending.map((item) => api.documents.get(state.projectId!, item.id)))
       const byId = new Map(refreshed.map((item) => [item.id, item]))
       update({ documents: state.documents.map((item) => byId.get(item.id) || item) })
     } catch {
@@ -66,9 +77,10 @@ export const documentStore = {
     }
   },
   async upload(file: File) {
+    if (!state.projectId) throw new Error('Select a project before uploading documents.')
     update({ error: null })
-    const document = await api.documents.upload(file)
-    window.localStorage.setItem('intellect-active-document', document.id)
+    const document = await api.documents.upload(state.projectId, file)
+    window.localStorage.setItem(`intellect-active-document:${state.projectId}`, document.id)
     update({
       documents: [document, ...state.documents.filter((item) => item.id !== document.id)],
       activeDocumentId: document.id,
@@ -76,9 +88,10 @@ export const documentStore = {
     return document
   },
   async remove(documentId: string) {
+    if (!state.projectId) return
     update({ error: null })
     try {
-      await api.documents.remove(documentId)
+      await api.documents.remove(state.projectId, documentId)
       const documents = state.documents.filter((item) => item.id !== documentId)
       const activeDocumentId = state.activeDocumentId === documentId ? documents[0]?.id || null : state.activeDocumentId
       this.select(activeDocumentId)
@@ -88,9 +101,10 @@ export const documentStore = {
     }
   },
   async waitUntilReady(documentId: string, timeoutMs = 120_000) {
+    if (!state.projectId) throw new Error('Select a project before processing documents.')
     const startedAt = Date.now()
     while (Date.now() - startedAt < timeoutMs) {
-      const document = await api.documents.get(documentId)
+      const document = await api.documents.get(state.projectId, documentId)
       update({
         documents: state.documents.map((item) => item.id === document.id ? document : item),
       })

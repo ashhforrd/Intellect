@@ -28,10 +28,12 @@ class DocumentDeletionService:
         *,
         document_id: UUID,
         owner_id: str,
+        project_id: UUID,
     ) -> bool:
         document = await self._repository.get_by_id(
             document_id=document_id,
             owner_id=owner_id,
+            project_id=project_id,
         )
 
         if document is None:
@@ -57,6 +59,7 @@ class DocumentDeletionService:
             await self._repository.delete(
                 document_id=document_id,
                 owner_id=owner_id,
+                project_id=project_id,
             )
             await self._session.commit()
 

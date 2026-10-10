@@ -29,6 +29,7 @@ class DocumentExtractionResponse(BaseModel):
 
 class DocumentResponse(BaseModel):
     id: UUID
+    project_id: UUID
     filename: str
     file_type: str
     size_bytes: int

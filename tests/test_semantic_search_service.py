@@ -23,6 +23,7 @@ async def test_semantic_search_embeds_query_and_searches_repository() -> None:
     repository = AsyncMock(spec=DocumentChunkRepository)
     embedding_provider = Mock(spec=EmbeddingProvider)
     document_id = uuid4()
+    project_id = uuid4()
     expected_results = [
         SemanticSearchResult(
             chunk_id=uuid4(),
@@ -44,6 +45,7 @@ async def test_semantic_search_embeds_query_and_searches_repository() -> None:
     results = await service.search(
         query="  dynamic   programming  ",
         owner_id="user-123",
+        project_id=project_id,
         document_id=document_id,
     )
 
@@ -51,6 +53,7 @@ async def test_semantic_search_embeds_query_and_searches_repository() -> None:
     embedding_provider.embed_texts.assert_called_once_with(["dynamic programming"])
     repository.semantic_search.assert_awaited_once_with(
         owner_id="user-123",
+        project_id=project_id,
         query_embedding=[0.1, 0.2],
         limit=5,
         document_id=document_id,
@@ -68,4 +71,5 @@ async def test_semantic_search_rejects_empty_query() -> None:
         await service.search(
             query="   ",
             owner_id="user-123",
+            project_id=uuid4(),
         )

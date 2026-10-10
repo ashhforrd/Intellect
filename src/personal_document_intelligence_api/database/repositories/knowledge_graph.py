@@ -9,6 +9,7 @@ from personal_document_intelligence_api.database.models.knowledge_graph import (
     KnowledgeGraphRecord,
     KnowledgeRelationRecord,
 )
+from personal_document_intelligence_api.database.models.project import ProjectMember
 from personal_document_intelligence_api.knowledge.models import (
     KnowledgeConcept,
     KnowledgeGraph,
@@ -70,6 +71,7 @@ class KnowledgeGraphRepository:
         *,
         document_id: UUID,
         owner_id: str,
+        project_id: UUID,
     ) -> KnowledgeGraph | None:
         graph_statement = (
             select(KnowledgeGraphRecord)
@@ -77,9 +79,14 @@ class KnowledgeGraphRepository:
                 Document,
                 Document.id == KnowledgeGraphRecord.document_id,
             )
+            .join(
+                ProjectMember,
+                ProjectMember.project_id == Document.project_id,
+            )
             .where(
                 KnowledgeGraphRecord.document_id == document_id,
-                Document.owner_id == owner_id,
+                Document.project_id == project_id,
+                ProjectMember.member_id == owner_id,
             )
         )
         graph_result = await self.session.execute(graph_statement)

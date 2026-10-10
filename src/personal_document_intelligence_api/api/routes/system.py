@@ -1,4 +1,8 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+
+from personal_document_intelligence_api.api.dependencies.auth import get_current_owner_id
 
 router = APIRouter(tags=["system"])
 
@@ -15,3 +19,10 @@ async def get_app_information() -> dict[str, str]:
         "version": "0.1.0",
         "docs_url": "/docs",
     }
+
+
+@router.get("/session")
+async def get_session_identity(
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> dict[str, str]:
+    return {"member_id": owner_id}

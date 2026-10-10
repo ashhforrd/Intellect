@@ -31,6 +31,7 @@ class SemanticSearchService:
         *,
         query: str,
         owner_id: str,
+        project_id: UUID,
         limit: int = 5,
         document_id: UUID | None = None,
     ) -> list[SemanticSearchResult]:
@@ -49,6 +50,7 @@ class SemanticSearchService:
 
         return await self.repository.semantic_search(
             owner_id=owner_id,
+            project_id=project_id,
             query_embedding=embeddings[0],
             limit=limit,
             document_id=document_id,

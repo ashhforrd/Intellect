@@ -1,8 +1,8 @@
 # Intellect
 
-Intellect is a document-intelligence platform for exploring personal documents
-through semantic search, grounded AI answers, citations, and interactive
-knowledge graphs.
+Intellect is a collaborative document-intelligence platform for exploring
+project knowledge through semantic search, grounded AI answers, citations,
+interactive knowledge graphs, and actionable conversation insights.
 
 It transforms uploaded PDF and DOCX files into searchable knowledge by combining
 OCR, asynchronous document processing, OpenAI embeddings, PostgreSQL with
@@ -31,6 +31,8 @@ Q&A, source inspection, and conversational knowledge graphs.
 ## Features
 
 - PDF and DOCX document ingestion
+- Project workspaces with member roles and strict document isolation
+- Dedicated multi-file document workspace with preview and processing status
 - OCR for scanned content using Tesseract
 - Asynchronous processing with Amazon SQS workers
 - OpenAI embedding generation
@@ -39,15 +41,17 @@ Q&A, source inspection, and conversational knowledge graphs.
 - Relevance filtering and deterministic fallback behavior
 - Inspectable retrieval chunks and similarity scores
 - Interactive conversation knowledge graphs
+- Key takeaways and priority-ranked next actions per conversation
 - Document preview and management
-- Anonymous session isolation and rate limiting
+- Authenticated team accounts, prompt attribution, and rate limiting
 - Retrieval and generation evaluation runners
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Browser[React client] --> API[FastAPI API]
+    Browser[React project workspace] --> API[FastAPI API]
+    API --> Access[Project membership boundary]
     API --> Storage[S3 or local storage]
     API --> Database[PostgreSQL and pgvector]
     API --> Queue[Amazon SQS]
@@ -68,10 +72,10 @@ flowchart LR
 
 | Component | Responsibility |
 | --- | --- |
-| React frontend | Chat, document management, citations, retrieval inspection, and graph visualization |
-| FastAPI API | Upload, document access, semantic search, RAG, and knowledge-graph endpoints |
+| React frontend | Project-scoped chat, document management, citations, insights, and graph visualization |
+| FastAPI API | Projects, memberships, upload, semantic search, RAG, insights, and graph endpoints |
 | Document worker | Parsing, OCR, chunking, embedding generation, and vector indexing |
-| PostgreSQL | Document metadata, extracted sections, chunks, and application state |
+| PostgreSQL | Projects, memberships, documents, sections, chunks, vectors, and saved insights |
 | pgvector | Vector storage and similarity search |
 | Amazon S3 | Original document storage |
 | Amazon SQS | Asynchronous document-processing jobs |
@@ -102,6 +106,11 @@ The upload endpoint returns before expensive extraction and embedding work is
 completed. The worker processes those tasks independently so the API remains
 responsive.
 
+Every document and chunk carries a `project_id`. Retrieval joins project
+membership before returning any chunk, so project isolation is enforced by the
+backend rather than trusted to the frontend. Existing installations are
+backfilled into a Personal project by the migration.
+
 ## RAG flow
 
 ```text
@@ -124,6 +133,13 @@ Intellect generates a structured knowledge graph from the current conversation.
 The graph focuses on useful learning concepts and meaningful relationships rather
 than raw source excerpts. The backend performs structured extraction, while the
 frontend renders the result as an interactive React Flow graph.
+
+## Conversation insights
+
+The adjacent Insights view derives concise takeaways and priority-ranked next
+actions from the current grounded conversation. Results are saved by project and
+thread. Insight extraction is deterministic and does not send the conversation
+to an additional external model.
 
 ## Inspectable AI
 
@@ -151,14 +167,15 @@ The current evaluation dataset is intentionally small and acts as a regression
 suite rather than a production benchmark.
 
 ```bash
-uv run python -m personal_document_intelligence_api.evaluation.runner
+uv run python -m personal_document_intelligence_api.evaluation.runner \
+  --project-id <project-uuid>
 uv run pytest
 ```
 
 Current backend test status:
 
 ```text
-45 passed
+48 passed
 ```
 
 ## Technology stack
@@ -211,6 +228,7 @@ production deployment is not currently included in this repository.
 │       ├── embeddings/
 │       ├── evaluation/
 │       ├── generation/
+│       ├── insights/
 │       ├── jobs/
 │       ├── knowledge/
 │       ├── rag/
@@ -286,6 +304,19 @@ npm run dev
 
 The frontend is available at <http://localhost:5173>.
 
+### Demo accounts
+
+The development migration seeds three members into the shared workspace:
+
+| Name | Email |
+| --- | --- |
+| Lucas | `lucas@intellect.id` |
+| Kezia | `kezia@intellect.id` |
+| Atqiya Haydar | `atqiya@intellect.id` |
+
+All three demo accounts use the password `IntellectDemo!2026`. These credentials
+are development fixtures only and must be replaced before a public deployment.
+
 ## Docker
 
 Build the backend image:
@@ -339,6 +370,14 @@ prematurely.
 Vector similarity alone does not guarantee relevance. A minimum relevance
 threshold prevents answer generation when retrieval evidence is too weak.
 
+### Project isolation
+
+Projects are the authorization boundary. Documents, chunks, retrieval, RAG,
+graphs, and saved insights are resolved in the current project. Membership roles
+are `owner`, `editor`, and `viewer`. Login sessions use signed, HttpOnly cookies,
+and successful conversation turns retain the authenticated author so a team can
+see who submitted each prompt.
+
 ### Inspectability
 
 Sources, chunks, scores, and graph relationships are visible so users can inspect
@@ -348,7 +387,7 @@ how an answer was constructed.
 
 - The evaluation dataset is intentionally small.
 - The in-memory rate limiter is designed for a single API process.
-- Conversation persistence is currently client-oriented.
+- Thread rendering state remains client-oriented; successful grounded turns are also persisted server-side for attribution.
 - The Docker image is functional but not optimized for minimum size.
 - A one-command Docker Compose environment is not yet included.
 - Production monitoring, automated backups, and deployment remain future work.
@@ -356,7 +395,7 @@ how an answer was constructed.
 ## Future improvements
 
 - Redis-backed distributed rate limiting
-- Server-side conversation persistence
+- Fully shared server-backed thread lists and history
 - Hybrid keyword and vector retrieval
 - Retrieval reranking
 - Larger evaluation datasets
@@ -364,7 +403,7 @@ how an answer was constructed.
 - Docker Compose development environment
 - Infrastructure as code
 - Streaming answers
-- Multi-user authentication
+- Password reset and invitation email flows
 
 ## Author
 

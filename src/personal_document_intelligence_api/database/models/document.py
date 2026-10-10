@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
 
-from sqlalchemy import BigInteger, DateTime, Enum, String, Text, func
+from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +33,11 @@ class Document(Base):
     )
     owner_id: Mapped[str] = mapped_column(
         String(128),
+        index=True,
+    )
+    project_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
         index=True,
     )
     filename: Mapped[str] = mapped_column(String(255))

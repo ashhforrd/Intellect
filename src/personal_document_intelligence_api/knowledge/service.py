@@ -42,10 +42,12 @@ class KnowledgeGraphService:
         *,
         document_id: UUID,
         owner_id: str,
+        project_id: UUID,
     ) -> KnowledgeGraph:
         chunks = await self.repository.list_for_document(
             document_id=document_id,
             owner_id=owner_id,
+            project_id=project_id,
             limit=self.max_chunks,
         )
 

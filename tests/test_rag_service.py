@@ -41,6 +41,7 @@ async def test_rag_retrieves_sources_and_generates_answer() -> None:
     result = await service.ask(
         question="What is dynamic programming?",
         owner_id="user-123",
+        project_id=uuid4(),
     )
 
     assert result.sources == (source,)
@@ -66,6 +67,7 @@ async def test_rag_skips_generation_when_no_sources_found() -> None:
     result = await service.ask(
         question="Unknown topic",
         owner_id="user-123",
+        project_id=uuid4(),
     )
 
     assert result.sources == ()
@@ -95,6 +97,7 @@ async def test_rag_skips_generation_for_irrelevant_sources() -> None:
     result = await service.ask(
         question="A question unrelated to the documents",
         owner_id="user-123",
+        project_id=uuid4(),
     )
 
     assert result.sources == ()

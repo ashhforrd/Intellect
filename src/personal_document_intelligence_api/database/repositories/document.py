@@ -8,6 +8,7 @@ from personal_document_intelligence_api.database.models.document import (
     Document,
     DocumentStatus,
 )
+from personal_document_intelligence_api.database.models.project import ProjectMember
 
 
 class DocumentRepository:
@@ -18,6 +19,7 @@ class DocumentRepository:
         self,
         *,
         owner_id: str,
+        project_id: UUID,
         filename: str,
         file_type: str,
         storage_key: str,
@@ -26,6 +28,7 @@ class DocumentRepository:
     ) -> Document:
         document = Document(
             owner_id=owner_id,
+            project_id=project_id,
             filename=filename,
             file_type=file_type,
             storage_key=storage_key,
@@ -44,26 +47,37 @@ class DocumentRepository:
         self,
         document_id: UUID,
         owner_id: str,
+        project_id: UUID,
     ) -> Document | None:
-        statement = select(Document).where(
-            Document.id == document_id,
-            Document.owner_id == owner_id,
+        statement = (
+            select(Document)
+            .join(ProjectMember, ProjectMember.project_id == Document.project_id)
+            .where(
+                Document.id == document_id,
+                Document.project_id == project_id,
+                ProjectMember.member_id == owner_id,
+            )
         )
 
         result = await self._session.execute(statement)
 
         return result.scalar_one_or_none()
 
-    async def list_by_owner(
+    async def list_by_project(
         self,
         owner_id: str,
+        project_id: UUID,
         *,
         limit: int = 50,
         offset: int = 0,
     ) -> Sequence[Document]:
         statement = (
             select(Document)
-            .where(Document.owner_id == owner_id)
+            .join(ProjectMember, ProjectMember.project_id == Document.project_id)
+            .where(
+                Document.project_id == project_id,
+                ProjectMember.member_id == owner_id,
+            )
             .order_by(Document.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -77,10 +91,12 @@ class DocumentRepository:
         self,
         document_id: UUID,
         owner_id: str,
+        project_id: UUID,
     ) -> bool:
         document = await self.get_by_id(
             document_id=document_id,
             owner_id=owner_id,
+            project_id=project_id,
         )
 
         if document is None:

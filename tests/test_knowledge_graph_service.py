@@ -30,9 +30,11 @@ async def test_generate_knowledge_graph_from_document_chunks() -> None:
     repository = AsyncMock(spec=DocumentChunkRepository)
     extractor = Mock(spec=KnowledgeGraphExtractor)
     document_id = uuid4()
+    project_id = uuid4()
     chunk = DocumentChunk(
         id=uuid4(),
         document_id=document_id,
+        project_id=project_id,
         position=0,
         section_position=0,
         chunk_index=0,
@@ -61,12 +63,14 @@ async def test_generate_knowledge_graph_from_document_chunks() -> None:
     graph = await service.generate(
         document_id=document_id,
         owner_id="user-123",
+        project_id=project_id,
     )
 
     assert graph is expected_graph
     repository.list_for_document.assert_awaited_once_with(
         document_id=document_id,
         owner_id="user-123",
+        project_id=project_id,
         limit=30,
     )
 
@@ -97,6 +101,7 @@ async def test_reject_document_without_chunks() -> None:
         await service.generate(
             document_id=uuid4(),
             owner_id="user-123",
+            project_id=uuid4(),
         )
 
     extractor.extract.assert_not_called()

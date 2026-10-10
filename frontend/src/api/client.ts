@@ -5,6 +5,12 @@ import type {
   DocumentSection,
   HealthResponse,
   KnowledgeGraph,
+  Project,
+  ProjectMember,
+  SessionIdentity,
+  ConversationInsights,
+  AuthUser,
+  ConversationTurnRecord,
   QuestionRequest,
   QuestionResponse,
   SemanticSearchRequest,
@@ -55,21 +61,58 @@ async function requestBlob(path: string): Promise<Blob> {
 
 export const api = {
   health: () => request<HealthResponse>('/health'),
+  session: () => request<SessionIdentity>('/session'),
+
+  auth: {
+    login: (email: string, password: string) => request<AuthUser>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+    me: () => request<AuthUser>('/auth/me'),
+    logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  },
+
+  projects: {
+    list: () => request<Project[]>('/projects'),
+    create: (name: string) => request<Project>('/projects', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+    rename: (projectId: string, name: string) => request<Project>(`/projects/${projectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }),
+    remove: (projectId: string) => request<void>(`/projects/${projectId}`, { method: 'DELETE' }),
+    members: (projectId: string) => request<ProjectMember[]>(`/projects/${projectId}/members`),
+    addMember: (
+      projectId: string,
+      payload: { member_id: string; display_name?: string; role: 'editor' | 'viewer' },
+    ) => request<ProjectMember>(`/projects/${projectId}/members`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+    removeMember: (projectId: string, memberId: string) =>
+      request<void>(`/projects/${projectId}/members/${encodeURIComponent(memberId)}`, {
+        method: 'DELETE',
+      }),
+  },
 
   documents: {
-    list: (limit = 50, offset = 0) =>
-      request<DocumentResponse[]>(`/documents?limit=${limit}&offset=${offset}`),
-    get: (documentId: string) => request<DocumentResponse>(`/documents/${documentId}`),
-    upload: (file: File) => {
+    list: (projectId: string, limit = 50, offset = 0) =>
+      request<DocumentResponse[]>(`/documents?project_id=${projectId}&limit=${limit}&offset=${offset}`),
+    get: (projectId: string, documentId: string) =>
+      request<DocumentResponse>(`/documents/${documentId}?project_id=${projectId}`),
+    upload: (projectId: string, file: File) => {
       const form = new FormData()
       form.append('file', file)
-      return request<DocumentResponse>('/documents', { method: 'POST', body: form })
+      return request<DocumentResponse>(`/documents?project_id=${projectId}`, { method: 'POST', body: form })
     },
-    remove: (documentId: string) =>
-      request<void>(`/documents/${documentId}`, { method: 'DELETE' }),
-    content: (documentId: string) => requestBlob(`/documents/${documentId}/content`),
-    sections: (documentId: string) =>
-      request<DocumentSection[]>(`/documents/${documentId}/sections`),
+    remove: (projectId: string, documentId: string) =>
+      request<void>(`/documents/${documentId}?project_id=${projectId}`, { method: 'DELETE' }),
+    content: (projectId: string, documentId: string) =>
+      requestBlob(`/documents/${documentId}/content?project_id=${projectId}`),
+    sections: (projectId: string, documentId: string) =>
+      request<DocumentSection[]>(`/documents/${documentId}/sections?project_id=${projectId}`),
   },
 
   questions: {
@@ -79,6 +122,8 @@ export const api = {
         body: JSON.stringify(payload),
         signal,
       }),
+    conversation: (projectId: string, threadId: string) =>
+      request<ConversationTurnRecord[]>(`/questions/conversations/${projectId}/${encodeURIComponent(threadId)}`),
   },
 
   search: (payload: SemanticSearchRequest, signal?: AbortSignal) =>
@@ -89,18 +134,28 @@ export const api = {
     }),
 
   knowledgeGraph: {
-    get: (documentId: string, signal?: AbortSignal) =>
-      request<KnowledgeGraph>(`/documents/${documentId}/knowledge-graph`, { signal }),
-    generate: (documentId: string, signal?: AbortSignal) =>
-      request<KnowledgeGraph>(`/documents/${documentId}/knowledge-graph`, {
+    get: (projectId: string, documentId: string, signal?: AbortSignal) =>
+      request<KnowledgeGraph>(`/documents/${documentId}/knowledge-graph?project_id=${projectId}`, { signal }),
+    generate: (projectId: string, documentId: string, signal?: AbortSignal) =>
+      request<KnowledgeGraph>(`/documents/${documentId}/knowledge-graph?project_id=${projectId}`, {
         method: 'POST',
         signal,
       }),
-    fromConversation: (turns: ConversationTurn[], signal?: AbortSignal) =>
+    fromConversation: (projectId: string, turns: ConversationTurn[], signal?: AbortSignal) =>
       request<KnowledgeGraph>('/knowledge/conversation-graph', {
         method: 'POST',
-        body: JSON.stringify({ turns }),
+        body: JSON.stringify({ project_id: projectId, turns }),
         signal,
+      }),
+  },
+
+  insights: {
+    get: (projectId: string, threadId: string) =>
+      request<ConversationInsights>(`/insights/conversation/${projectId}/${encodeURIComponent(threadId)}`),
+    generate: (projectId: string, threadId: string, turns: ConversationTurn[]) =>
+      request<ConversationInsights>('/insights/conversation', {
+        method: 'POST',
+        body: JSON.stringify({ project_id: projectId, thread_id: threadId, turns }),
       }),
   },
 }

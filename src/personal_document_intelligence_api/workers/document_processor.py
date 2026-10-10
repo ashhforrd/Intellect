@@ -88,6 +88,7 @@ class DocumentProcessor:
 
             await self.chunk_repository.replace_for_document(
                 document.id,
+                document.project_id,
                 chunks,
                 embeddings,
             )

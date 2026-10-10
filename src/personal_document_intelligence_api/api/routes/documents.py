@@ -32,12 +32,14 @@ from personal_document_intelligence_api.api.schemas.documents import (
     DocumentSectionResponse,
     StoredDocumentSectionResponse,
 )
+from personal_document_intelligence_api.database.models.project import ProjectRole
 from personal_document_intelligence_api.database.repositories.document import (
     DocumentRepository,
 )
 from personal_document_intelligence_api.database.repositories.document_section import (
     DocumentSectionRepository,
 )
+from personal_document_intelligence_api.database.repositories.project import ProjectRepository
 from personal_document_intelligence_api.database.session import (
     get_database_session,
 )
@@ -67,6 +69,20 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 extraction_service = DocumentExtractionService(
     ocr_engine=TesseractOcrEngine(),
 )
+
+
+async def authorize_project(
+    session: AsyncSession,
+    project_id: UUID,
+    owner_id: str,
+    *,
+    write: bool = False,
+) -> None:
+    membership = await ProjectRepository(session).get_membership(project_id, owner_id)
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if write and membership.role == ProjectRole.VIEWER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Editor access required")
 
 
 @router.post(
@@ -155,7 +171,9 @@ async def upload_document(
         None,
         Depends(enforce_expensive_rate_limit),
     ],
+    project_id: Annotated[UUID, Query()],
 ) -> DocumentResponse:
+    await authorize_project(session, project_id, owner_id, write=True)
     try:
         file_bytes = await file.read(DEFAULT_MAX_FILE_SIZE_BYTES + 1)
     finally:
@@ -198,6 +216,7 @@ async def upload_document(
     try:
         document = await upload_service.upload(
             owner_id=owner_id,
+            project_id=project_id,
             file_bytes=file_bytes,
             document_upload=document_upload,
         )
@@ -234,13 +253,15 @@ async def list_documents(
         str,
         Depends(get_current_owner_id),
     ],
+    project_id: Annotated[UUID, Query()],
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[DocumentResponse]:
     repository = DocumentRepository(session)
 
-    documents = await repository.list_by_owner(
+    documents = await repository.list_by_project(
         owner_id=owner_id,
+        project_id=project_id,
         limit=limit,
         offset=offset,
     )
@@ -262,12 +283,14 @@ async def get_document(
         str,
         Depends(get_current_owner_id),
     ],
+    project_id: Annotated[UUID, Query()],
 ) -> DocumentResponse:
     repository = DocumentRepository(session)
 
     document = await repository.get_by_id(
         document_id=document_id,
         owner_id=owner_id,
+        project_id=project_id,
     )
 
     if document is None:
@@ -297,7 +320,9 @@ async def delete_document(
         str,
         Depends(get_current_owner_id),
     ],
+    project_id: Annotated[UUID, Query()],
 ) -> Response:
+    await authorize_project(session, project_id, owner_id, write=True)
     repository = DocumentRepository(session)
     deletion_service = DocumentDeletionService(
         session=session,
@@ -309,6 +334,7 @@ async def delete_document(
         deleted = await deletion_service.delete(
             document_id=document_id,
             owner_id=owner_id,
+            project_id=project_id,
         )
     except StorageError as error:
         raise HTTPException(
@@ -331,9 +357,14 @@ async def get_document_content(
     session: Annotated[AsyncSession, Depends(get_database_session)],
     storage: Annotated[FileStorage, Depends(get_file_storage)],
     owner_id: Annotated[str, Depends(get_current_owner_id)],
+    project_id: Annotated[UUID, Query()],
 ) -> StreamingResponse:
     repository = DocumentRepository(session)
-    document = await repository.get_by_id(document_id=document_id, owner_id=owner_id)
+    document = await repository.get_by_id(
+        document_id=document_id,
+        owner_id=owner_id,
+        project_id=project_id,
+    )
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
@@ -373,12 +404,14 @@ async def list_document_sections(
         str,
         Depends(get_current_owner_id),
     ],
+    project_id: Annotated[UUID, Query()],
 ) -> list[StoredDocumentSectionResponse]:
     document_repository = DocumentRepository(session)
 
     document = await document_repository.get_by_id(
         document_id=document_id,
         owner_id=owner_id,
+        project_id=project_id,
     )
 
     if document is None:

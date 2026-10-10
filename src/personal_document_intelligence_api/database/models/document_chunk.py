@@ -36,6 +36,11 @@ class DocumentChunk(Base):
         ForeignKey("documents.id", ondelete="CASCADE"),
         index=True,
     )
+    project_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        index=True,
+    )
     position: Mapped[int] = mapped_column(Integer)
     section_position: Mapped[int] = mapped_column(Integer)
     chunk_index: Mapped[int] = mapped_column(Integer)

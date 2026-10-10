@@ -27,6 +27,7 @@ from personal_document_intelligence_api.core.config import (
 from personal_document_intelligence_api.database.models.document import (
     DocumentStatus,
 )
+from personal_document_intelligence_api.database.models.project import ProjectRole
 from personal_document_intelligence_api.database.repositories.document import (
     DocumentRepository,
 )
@@ -36,6 +37,7 @@ from personal_document_intelligence_api.database.repositories.document_chunk imp
 from personal_document_intelligence_api.database.repositories.knowledge_graph import (
     KnowledgeGraphRepository,
 )
+from personal_document_intelligence_api.database.repositories.project import ProjectRepository
 from personal_document_intelligence_api.database.session import (
     get_database_session,
 )
@@ -97,7 +99,14 @@ async def generate_conversation_graph(
         KnowledgeGraphExtractor,
         Depends(get_knowledge_graph_extractor),
     ],
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
 ) -> KnowledgeGraphResponse:
+    membership = await ProjectRepository(session).get_membership(request.project_id, owner_id)
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if membership.role == ProjectRole.VIEWER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Editor access required")
     contexts = [
         KnowledgeSource(
             chunk_id=uuid4(),
@@ -130,11 +139,13 @@ async def get_knowledge_graph(
     document_id: UUID,
     session: Annotated[AsyncSession, Depends(get_database_session)],
     owner_id: Annotated[str, Depends(get_current_owner_id)],
+    project_id: UUID,
 ) -> KnowledgeGraphResponse:
     document_repository = DocumentRepository(session)
     document = await document_repository.get_by_id(
         document_id=document_id,
         owner_id=owner_id,
+        project_id=project_id,
     )
     if document is None:
         raise HTTPException(
@@ -145,6 +156,7 @@ async def get_knowledge_graph(
     graph = await KnowledgeGraphRepository(session).get_for_document(
         document_id=document.id,
         owner_id=owner_id,
+        project_id=project_id,
     )
     if graph is None:
         raise HTTPException(
@@ -177,11 +189,18 @@ async def generate_knowledge_graph(
         str,
         Depends(get_current_owner_id),
     ],
+    project_id: UUID,
 ) -> KnowledgeGraphResponse:
+    membership = await ProjectRepository(session).get_membership(project_id, owner_id)
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if membership.role == ProjectRole.VIEWER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Editor access required")
     document_repository = DocumentRepository(session)
     document = await document_repository.get_by_id(
         document_id=document_id,
         owner_id=owner_id,
+        project_id=project_id,
     )
 
     if document is None:
@@ -208,6 +227,7 @@ async def generate_knowledge_graph(
         graph = await service.generate(
             document_id=document.id,
             owner_id=owner_id,
+            project_id=project_id,
         )
     except DocumentHasNoChunksError as error:
         raise HTTPException(
