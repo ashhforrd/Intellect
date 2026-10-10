@@ -6,12 +6,13 @@ import type {
 import { documentStore } from './documentStore'
 
 const acceptedTypes = '.pdf,.docx,.md,.txt'
+const maxDocumentSizeBytes = 50 * 1024 * 1024
 
 export class DocumentAttachmentAdapter implements AttachmentAdapter {
   accept = acceptedTypes
 
   async *add({ file }: { file: File }): AsyncGenerator<PendingAttachment> {
-    if (file.size > 20 * 1024 * 1024) throw new Error('File exceeds the 20 MB limit')
+    if (file.size > maxDocumentSizeBytes) throw new Error('File exceeds the 50 MB limit')
 
     const attachment = {
       id: crypto.randomUUID(),

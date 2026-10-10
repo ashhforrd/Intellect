@@ -9,7 +9,7 @@ from .parser import (
     parse_document,
 )
 
-DEFAULT_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
+DEFAULT_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
 
 
 class DocumentValidationError(Exception):
