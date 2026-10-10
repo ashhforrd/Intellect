@@ -19,7 +19,7 @@ import { AnswerEvidence } from './AnswerEvidence'
 import { AssistantRuntimeProvider } from './AssistantRuntimeProvider'
 import { ChatGraph } from './ChatGraph'
 import { MarkdownAnswer } from './MarkdownAnswer'
-import { OwlMascot } from './OwlMascot'
+import { AppIcon, OwlMascot } from './OwlMascot'
 import { api } from './api/client'
 import type { ConversationInsights, ConversationTurn, ProjectMember } from './api/types'
 import { chatGraphStore, useChatGraph } from './chatGraphStore'
@@ -89,7 +89,7 @@ function Sidebar({ page, onNavigate, onClose }: { page: Page; onNavigate: (page:
   async function startNewChat() { onNavigate('chat'); await aui.threads.switchToNewThread() }
 
   return <aside className="sidebar">
-    <div className="sidebar-top"><button className="icon-button mobile-menu" onClick={onClose}><Menu size={18} /></button><div className="brand"><span><OwlMascot size={19} /></span>intellect</div><div className="sidebar-top-actions"><button className="icon-button" aria-label="Manage project members" onClick={() => setMembersOpen(true)}><Users size={17} /></button><button className="icon-button" aria-label="Create project" onClick={() => setCreateOpen(true)}><Plus size={17} /></button></div></div>
+    <div className="sidebar-top"><button className="icon-button mobile-menu" onClick={onClose}><Menu size={18} /></button><div className="brand"><span><AppIcon size={27} /></span>intellect</div><div className="sidebar-top-actions"><button className="icon-button" aria-label="Manage project members" onClick={() => setMembersOpen(true)}><Users size={17} /></button><button className="icon-button" aria-label="Create project" onClick={() => setCreateOpen(true)}><Plus size={17} /></button></div></div>
     <label className="project-select-label">Project</label>
     <select className="project-select" value={activeProjectId || ''} onChange={(event) => projectStore.select(event.target.value)}>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
     <nav className="primary-nav"><button className={page === 'chat' ? 'active' : ''} onClick={() => onNavigate('chat')}><MessageSquare size={16} />Chat</button><button className={page === 'documents' ? 'active' : ''} onClick={() => onNavigate('documents')}><Files size={16} />Documents</button></nav>
@@ -163,7 +163,7 @@ function UserMessage() {
   const author = usePromptAuthor(messageId)
   return <MessagePrimitive.Root className="message user-message"><div className="user-message-stack"><span className="message-author">{author?.display_name || 'Team member'}</span><div className="message-content"><MessagePrimitive.Parts /></div></div></MessagePrimitive.Root>
 }
-function AssistantMessage() { return <MessagePrimitive.Root className="message assistant-message"><span className="assistant-mark"><OwlMascot size={19} /></span><div className="message-content"><MessagePrimitive.Parts components={{ Text: MarkdownAnswer, data: { by_name: { 'rag-evidence': AnswerEvidence } } }} /></div></MessagePrimitive.Root> }
+function AssistantMessage() { return <MessagePrimitive.Root className="message assistant-message"><span className="assistant-mark"><AppIcon size={32} /></span><div className="message-content"><MessagePrimitive.Parts components={{ Text: MarkdownAnswer, data: { by_name: { 'rag-evidence': AnswerEvidence } } }} /></div></MessagePrimitive.Root> }
 
 function Composer({ projectId }: { projectId: string }) {
   return <ComposerPrimitive.Root className="aui-composer"><DraftRestore projectId={projectId} /><ComposerPrimitive.Input className="aui-input" placeholder="Ask about this project's documents…" rows={1} /><div className="composer-actions"><span className="composer-scope"><Files size={14} />Project sources</span><AuiIf condition={(state) => !state.thread.isRunning}><ComposerPrimitive.Send className="send"><ArrowUp size={17} /></ComposerPrimitive.Send></AuiIf><AuiIf condition={(state) => state.thread.isRunning}><ComposerPrimitive.Cancel className="send cancel"><Square size={12} /></ComposerPrimitive.Cancel></AuiIf></div></ComposerPrimitive.Root>

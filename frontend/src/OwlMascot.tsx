@@ -3,6 +3,10 @@ type OwlMascotProps = {
   size?: number
 }
 
+export function AppIcon({ className, size = 24 }: OwlMascotProps) {
+  return <img className={className} src="/favicon.svg" width={size} height={size} alt="" aria-hidden="true" />
+}
+
 export function OwlMascot({ className, size = 24 }: OwlMascotProps) {
   return (
     <svg
