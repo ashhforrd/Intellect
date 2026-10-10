@@ -65,7 +65,11 @@ class DocumentChunkRepository:
         distance = DocumentChunk.embedding.cosine_distance(list(query_embedding)).label("distance")
 
         statement = (
-            select(DocumentChunk, distance)
+            select(DocumentChunk, Document.filename, distance)
+            .join(
+                Document,
+                Document.id == DocumentChunk.document_id,
+            )
             .join(
                 ProjectMember,
                 ProjectMember.project_id == DocumentChunk.project_id,
@@ -90,8 +94,9 @@ class DocumentChunkRepository:
                 text=chunk.text,
                 page_number=chunk.page_number,
                 score=1 - float(cosine_distance),
+                document_name=filename,
             )
-            for chunk, cosine_distance in result.all()
+            for chunk, filename, cosine_distance in result.all()
         ]
 
     async def list_for_document(

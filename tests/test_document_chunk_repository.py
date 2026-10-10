@@ -86,7 +86,7 @@ async def test_semantic_search_maps_distance_to_similarity() -> None:
         embedding=[0.1, 0.2],
     )
 
-    query_result.all.return_value = [(stored_chunk, 0.15)]
+    query_result.all.return_value = [(stored_chunk, "Relevant.pdf", 0.15)]
     session.execute.return_value = query_result
 
     repository = DocumentChunkRepository(session)
@@ -100,4 +100,5 @@ async def test_semantic_search_maps_distance_to_similarity() -> None:
 
     assert len(results) == 1
     assert results[0].text == "Relevant document content"
+    assert results[0].document_name == "Relevant.pdf"
     assert results[0].score == pytest.approx(0.85)

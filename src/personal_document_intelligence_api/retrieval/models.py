@@ -17,3 +17,4 @@ class SemanticSearchResult:
     text: str
     page_number: int | None
     score: float
+    document_name: str = ""

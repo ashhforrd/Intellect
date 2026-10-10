@@ -53,7 +53,7 @@ const apiModel: ChatModelAdapter = {
         project_id: projectId,
         thread_id: threadId,
         question,
-        retrieval_limit: 5,
+        retrieval_limit: 8,
       }, abortSignal)
       if (promptMessageId) promptAuthorStore.set(promptMessageId, response.author)
 

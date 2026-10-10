@@ -28,7 +28,8 @@ class OpenAIAnswerGenerator:
     ) -> str:
         sources = "\n\n".join(
             (
-                f"[Source {index} | document={context.document_id} "
+                f"[Source {index} | document={context.document_name or context.document_id} "
+                f"| document_id={context.document_id} "
                 f"| page={context.page_number or 'unknown'} "
                 f"| chunk={context.chunk_id}]\n"
                 f"{context.text}"
