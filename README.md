@@ -375,8 +375,10 @@ REDIS_URL=redis://localhost:6379/0
 Create a private `documents` bucket in Supabase before uploading. Never expose
 the service-role key in frontend code or commit it to Git. The development
 scripts start Redis through Docker automatically when `JOB_QUEUE_BACKEND` is
-`redis`. They start the Docker PostgreSQL service only when `DATABASE_URL`
-points to `localhost` or `127.0.0.1`.
+`redis`. If a healthy Redis already owns the configured local port, the scripts
+reuse it. A managed or otherwise remote `REDIS_URL` is used directly without
+starting a local container. The scripts start the Docker PostgreSQL service
+only when `DATABASE_URL` points to `localhost` or `127.0.0.1`.
 
 For completely offline development, switch back to the filesystem adapters:
 

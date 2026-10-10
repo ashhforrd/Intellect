@@ -92,8 +92,17 @@ if [[ "$database_url" == *"localhost"* || "$database_url" == *"127.0.0.1"* ]]; t
 fi
 
 if grep -Eq '^JOB_QUEUE_BACKEND=redis([[:space:]]*)$' .env; then
-  echo "Starting Redis..."
-  docker compose up -d --wait redis
+  redis_url="$(grep -E '^REDIS_URL=' .env | tail -n 1 | cut -d= -f2-)"
+  if [[ "$redis_url" == *"localhost"* || "$redis_url" == *"127.0.0.1"* ]]; then
+    if uv run python -c 'import sys; from redis import Redis; Redis.from_url(sys.argv[1]).ping()' "$redis_url" >/dev/null 2>&1; then
+      echo "Using Redis already running at $redis_url."
+    else
+      echo "Starting Redis..."
+      docker compose up -d --wait redis
+    fi
+  else
+    echo "Using external Redis configured in REDIS_URL."
+  fi
 fi
 
 echo "Applying database migrations..."

@@ -145,9 +145,21 @@ try {
     }
 
     if ((Get-EnvFileValue "JOB_QUEUE_BACKEND") -eq "redis") {
-        Write-Host "Starting Redis..."
-        & docker compose up -d --wait redis
-        Assert-LastCommand "Redis startup"
+        $redisUrl = Get-EnvFileValue "REDIS_URL"
+        if ($redisUrl -match "localhost|127\.0\.0\.1") {
+            & $uv run python -c "import sys; from redis import Redis; Redis.from_url(sys.argv[1]).ping()" $redisUrl 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "Using Redis already running at $redisUrl."
+            }
+            else {
+                Write-Host "Starting Redis..."
+                & docker compose up -d --wait redis
+                Assert-LastCommand "Redis startup"
+            }
+        }
+        else {
+            Write-Host "Using external Redis configured in REDIS_URL."
+        }
     }
 
     Write-Host "Applying database migrations..."
