@@ -332,7 +332,8 @@ Copy-Item .env.example .env
 ```
 
 Generate a cryptographically secure session secret. This value signs login
-session cookies and is required by the development startup script.
+session cookies. It is required by the macOS/Linux development script and
+recommended, but optional, for local development through the Windows script.
 
 macOS or Linux:
 

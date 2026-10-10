@@ -84,11 +84,11 @@ function Stop-DevelopmentProcesses {
 if (-not (Test-Path $EnvFile)) {
     Copy-Item (Join-Path $RootDir ".env.example") $EnvFile
     Write-Host "Created .env from .env.example."
-    Write-Host "Fill in OPENAI_API_KEY, SQS_QUEUE_URL, ANONYMOUS_SESSION_SECRET, and any storage or AWS settings, then run this script again."
+    Write-Host "Fill in OPENAI_API_KEY, SQS_QUEUE_URL, and any storage or AWS settings, then run this script again."
     exit 0
 }
 
-$requiredSettings = @("OPENAI_API_KEY", "SQS_QUEUE_URL", "ANONYMOUS_SESSION_SECRET")
+$requiredSettings = @("OPENAI_API_KEY", "SQS_QUEUE_URL")
 if ((Get-EnvFileValue "STORAGE_BACKEND") -eq "s3") {
     $requiredSettings += "S3_BUCKET_NAME"
 }
