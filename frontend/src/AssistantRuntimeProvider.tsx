@@ -20,8 +20,30 @@ const browserStorage = {
   removeItem: async (key: string) => window.localStorage.removeItem(key),
 }
 
+async function* streamResponse(text: string, sources: unknown[] = [], abortSignal?: AbortSignal) {
+  const units = text.match(/\S+\s*/g) ?? [text]
+  const unitsPerFrame = Math.max(2, Math.ceil(units.length / 180))
+  let visibleText = ''
+
+  for (let index = 0; index < units.length; index += unitsPerFrame) {
+    if (abortSignal?.aborted) throw new DOMException('The request was aborted.', 'AbortError')
+    visibleText += units.slice(index, index + unitsPerFrame).join('')
+    yield { content: [{ type: 'text' as const, text: visibleText }] }
+    await new Promise((resolve) => window.setTimeout(resolve, 12))
+  }
+
+  if (sources.length > 0) {
+    yield {
+      content: [
+        { type: 'text' as const, text },
+        { type: 'data' as const, name: 'rag-evidence', data: { sources } },
+      ],
+    }
+  }
+}
+
 const apiModel: ChatModelAdapter = {
-  async run({ messages, abortSignal }) {
+  async *run({ messages, abortSignal }) {
     const question = messages.at(-1)?.content
       .filter((part) => part.type === 'text')
       .map((part) => part.text)
@@ -29,21 +51,25 @@ const apiModel: ChatModelAdapter = {
     const promptMessageId = messages.at(-1)?.id
 
     if (!question?.trim()) {
-      return { content: [{ type: 'text', text: 'Please enter a question about your documents.' }] }
+      yield* streamResponse('Please enter a question about your documents.', [], abortSignal)
+      return
     }
 
     const documentState = documentStore.getSnapshot()
     const projectId = projectStore.getSnapshot().activeProjectId
     const threadId = chatContext.getThreadId() || messages[0]?.id || messages.at(-1)?.id
     if (!projectId) {
-      return { content: [{ type: 'text', text: 'Select a project before asking a question.' }] }
+      yield* streamResponse('Select a project before asking a question.', [], abortSignal)
+      return
     }
     if (!threadId) {
-      return { content: [{ type: 'text', text: 'Unable to identify this conversation. Please start a new chat.' }] }
+      yield* streamResponse('Unable to identify this conversation. Please start a new chat.', [], abortSignal)
+      return
     }
     const readyDocuments = documentState.documents.filter((item) => item.status === 'ready')
     if (readyDocuments.length === 0) {
-      return { content: [{ type: 'text', text: 'No project documents are ready yet. Keep the worker running and wait until processing finishes.' }] }
+      yield* streamResponse('No project documents are ready yet. Keep the worker running and wait until processing finishes.', [], abortSignal)
+      return
     }
 
     try {
@@ -57,16 +83,11 @@ const apiModel: ChatModelAdapter = {
       }, abortSignal)
       if (promptMessageId) promptAuthorStore.set(promptMessageId, response.author)
 
-      return {
-        content: [
-          { type: 'text', text: response.answer },
-          { type: 'data', name: 'rag-evidence', data: { sources: response.sources } },
-        ],
-      }
+      yield* streamResponse(response.answer, response.sources, abortSignal)
     } catch (error) {
       if (abortSignal.aborted) throw error
       const message = error instanceof ApiError ? error.message : 'The request could not be completed.'
-      return { content: [{ type: 'text', text: `Unable to answer: ${message}` }] }
+      yield* streamResponse(`Unable to answer: ${message}`, [], abortSignal)
     }
   },
 }
