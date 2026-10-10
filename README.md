@@ -263,12 +263,42 @@ uv sync
 
 ### 2. Configure the environment
 
+macOS, Linux, or Git Bash:
+
 ```bash
 cp .env.example .env
 ```
 
-Update `.env` with the required database, OpenAI, storage, and queue settings.
-Never commit `.env` or real credentials.
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Generate a cryptographically secure session secret. This value signs login
+session cookies and is required by the development startup script.
+
+macOS or Linux:
+
+```bash
+openssl rand -hex 32
+```
+
+Windows PowerShell, or any platform with Python installed:
+
+```powershell
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Copy the generated value into `.env`:
+
+```dotenv
+ANONYMOUS_SESSION_SECRET=<generated-64-character-value>
+```
+
+Then update the remaining required database, OpenAI, storage, and queue
+settings. Each developer should generate their own session secret. Never commit
+`.env`, the generated secret, or any real credentials.
 
 ### 3. Run database migrations
 
@@ -313,6 +343,15 @@ frontend from one terminal:
 ```bash
 ./scripts/dev.sh
 ```
+
+`dev.sh` is a Bash script. On Windows, run it through Git Bash or WSL:
+
+```bash
+bash scripts/dev.sh
+```
+
+If the script reports an incomplete environment setting, update that key in
+`.env`; placeholder values from `.env.example` are intentionally rejected.
 
 Press `Ctrl+C` to stop the API, worker, and frontend. PostgreSQL remains
 available in Docker so subsequent starts do not need to recreate the database.
