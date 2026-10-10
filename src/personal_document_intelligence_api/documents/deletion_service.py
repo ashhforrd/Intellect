@@ -8,7 +8,6 @@ from personal_document_intelligence_api.database.repositories.document import (
 )
 from personal_document_intelligence_api.storage import (
     FileStorage,
-    StoredFileNotFoundError,
 )
 
 
@@ -40,26 +39,14 @@ class DocumentDeletionService:
             return False
 
         try:
-            stored_file = await asyncio.to_thread(
-                self._storage.read,
-                document.storage_key,
-            )
-        except StoredFileNotFoundError:
-            stored_file = None
+            # Flush the relational delete first. If storage deletion fails, the
+            # transaction can still be rolled back without downloading a copy
+            # of the original object from S3.
+            await self._repository.delete(document)
 
-        file_deleted = False
-
-        try:
             await asyncio.to_thread(
                 self._storage.delete,
                 document.storage_key,
-            )
-            file_deleted = True
-
-            await self._repository.delete(
-                document_id=document_id,
-                owner_id=owner_id,
-                project_id=project_id,
             )
             await self._session.commit()
 
@@ -67,12 +54,4 @@ class DocumentDeletionService:
 
         except Exception:
             await self._session.rollback()
-
-            if file_deleted and stored_file is not None:
-                await asyncio.to_thread(
-                    self._storage.save,
-                    document.storage_key,
-                    stored_file,
-                )
-
             raise

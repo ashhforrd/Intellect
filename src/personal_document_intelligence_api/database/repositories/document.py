@@ -89,23 +89,10 @@ class DocumentRepository:
 
     async def delete(
         self,
-        document_id: UUID,
-        owner_id: str,
-        project_id: UUID,
-    ) -> bool:
-        document = await self.get_by_id(
-            document_id=document_id,
-            owner_id=owner_id,
-            project_id=project_id,
-        )
-
-        if document is None:
-            return False
-
+        document: Document,
+    ) -> None:
         await self._session.delete(document)
         await self._session.flush()
-
-        return True
 
     async def get_by_id_internal(
         self,

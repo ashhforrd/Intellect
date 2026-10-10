@@ -89,15 +89,26 @@ export const documentStore = {
   },
   async remove(documentId: string) {
     if (!state.projectId) return
+    const previousDocuments = state.documents
+    const previousActiveDocumentId = state.activeDocumentId
+    const documents = state.documents.filter((item) => item.id !== documentId)
+    const activeDocumentId = state.activeDocumentId === documentId ? documents[0]?.id || null : state.activeDocumentId
     update({ error: null })
+    this.select(activeDocumentId)
+    update({ documents, activeDocumentId })
     try {
       await api.documents.remove(state.projectId, documentId)
-      const documents = state.documents.filter((item) => item.id !== documentId)
-      const activeDocumentId = state.activeDocumentId === documentId ? documents[0]?.id || null : state.activeDocumentId
-      this.select(activeDocumentId)
-      update({ documents, activeDocumentId })
     } catch (error) {
-      update({ error: messageFrom(error) })
+      if (state.projectId) {
+        const key = `intellect-active-document:${state.projectId}`
+        if (previousActiveDocumentId) window.localStorage.setItem(key, previousActiveDocumentId)
+        else window.localStorage.removeItem(key)
+      }
+      update({
+        documents: previousDocuments,
+        activeDocumentId: previousActiveDocumentId,
+        error: messageFrom(error),
+      })
     }
   },
   async waitUntilReady(documentId: string, timeoutMs = 120_000) {
