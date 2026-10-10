@@ -104,7 +104,7 @@ Borders are generally 1px and low contrast. Elevation comes mostly from subtle b
 ### Chat
 
 - The welcome state centers the owl mark, a short heading, supporting copy, and suggestion chips.
-- User messages align right in a contrasting bubble. Assistant responses align left with a small assistant mark and markdown content.
+- User messages align right in a medium-gray (`#3a3a3a`) bubble with white text. Assistant responses align left with a small assistant mark and markdown content.
 - The composer is a bordered, rounded panel anchored to the bottom of the reading area. Attachments appear as compact file cards; sending and canceling use a square icon button.
 - Grounding evidence is expandable beneath answers. Sources and retrieval chunks use bordered inset cards, with source number, filename/metadata, and excerpt.
 - Processing status uses a short sequence of labels and animated dots. Follow-up prompts appear as compact outlined chips.
