@@ -57,14 +57,14 @@ async def generate_conversation_insights(
 
 @router.get(
     "/conversation/{project_id}/{thread_id}",
-    response_model=ConversationInsightResponse,
+    response_model=ConversationInsightResponse | None,
 )
 async def get_conversation_insights(
     project_id: UUID,
     thread_id: str,
     session: Annotated[AsyncSession, Depends(get_database_session)],
     owner_id: Annotated[str, Depends(get_current_owner_id)],
-) -> ConversationInsightResponse:
+) -> ConversationInsightResponse | None:
     if await ProjectRepository(session).get_for_member(project_id, owner_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     record = await ProjectInsightRepository(session).get_latest(
@@ -72,5 +72,5 @@ async def get_conversation_insights(
         thread_id=thread_id,
     )
     if record is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Insights not generated")
+        return None
     return insight_response(record)

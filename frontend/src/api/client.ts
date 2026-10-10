@@ -151,7 +151,7 @@ export const api = {
 
   insights: {
     get: (projectId: string, threadId: string) =>
-      request<ConversationInsights>(`/insights/conversation/${projectId}/${encodeURIComponent(threadId)}`),
+      request<ConversationInsights | null>(`/insights/conversation/${projectId}/${encodeURIComponent(threadId)}`),
     generate: (projectId: string, threadId: string, turns: ConversationTurn[]) =>
       request<ConversationInsights>('/insights/conversation', {
         method: 'POST',
