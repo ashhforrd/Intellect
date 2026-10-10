@@ -344,10 +344,11 @@ frontend from one terminal:
 ./scripts/dev.sh
 ```
 
-`dev.sh` is a Bash script. On Windows, run it through Git Bash or WSL:
+On Windows PowerShell, use the native Windows development script:
 
-```bash
-bash scripts/dev.sh
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\scripts\dev.ps1
 ```
 
 If the script reports an incomplete environment setting, update that key in
