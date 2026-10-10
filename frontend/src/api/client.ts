@@ -11,6 +11,7 @@ import type {
   ConversationInsights,
   AuthUser,
   ConversationTurnRecord,
+  ConversationThreadRecord,
   QuestionRequest,
   QuestionResponse,
   SemanticSearchRequest,
@@ -124,6 +125,24 @@ export const api = {
       }),
     conversation: (projectId: string, threadId: string) =>
       request<ConversationTurnRecord[]>(`/questions/conversations/${projectId}/${encodeURIComponent(threadId)}`),
+    conversations: {
+      list: (projectId: string) =>
+        request<ConversationThreadRecord[]>(`/questions/conversations/${projectId}`),
+      create: (projectId: string, threadId: string, title = 'New conversation') =>
+        request<ConversationThreadRecord>(`/questions/conversations/${projectId}`, {
+          method: 'POST',
+          body: JSON.stringify({ id: threadId, title }),
+        }),
+      get: (projectId: string, threadId: string) =>
+        request<ConversationThreadRecord>(`/questions/conversations/${projectId}/${encodeURIComponent(threadId)}/metadata`),
+      update: (projectId: string, threadId: string, payload: { title?: string; is_archived?: boolean }) =>
+        request<ConversationThreadRecord>(`/questions/conversations/${projectId}/${encodeURIComponent(threadId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        }),
+      remove: (projectId: string, threadId: string) =>
+        request<void>(`/questions/conversations/${projectId}/${encodeURIComponent(threadId)}`, { method: 'DELETE' }),
+    },
   },
 
   search: (payload: SemanticSearchRequest, signal?: AbortSignal) =>

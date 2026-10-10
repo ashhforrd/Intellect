@@ -1,3 +1,4 @@
+from .conversation_thread import ConversationThreadRecord
 from .conversation_turn import ConversationTurnRecord
 from .document import Document, DocumentStatus
 from .document_chunk import DocumentChunk
@@ -13,6 +14,7 @@ from .user import User
 
 __all__ = [
     "Document",
+    "ConversationThreadRecord",
     "ConversationTurnRecord",
     "DocumentChunk",
     "DocumentSection",

@@ -40,3 +40,25 @@ class ConversationTurnResponse(BaseModel):
     answer: str
     created_at: datetime
     author: PromptAuthorResponse
+
+
+class ConversationThreadCreate(BaseModel):
+    id: str = Field(min_length=1, max_length=160)
+    title: str = Field(default="New conversation", min_length=1, max_length=120)
+
+
+class ConversationThreadUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    is_archived: bool | None = None
+
+
+class ConversationThreadResponse(BaseModel):
+    id: str
+    project_id: UUID
+    title: str
+    created_by: UUID
+    is_archived: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

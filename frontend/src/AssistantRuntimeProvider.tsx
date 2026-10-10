@@ -1,24 +1,22 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
 import {
   AssistantRuntimeProvider as RuntimeProvider,
+  ExportedMessageRepository,
   useLocalRuntime,
   useRemoteThreadListRuntime,
   useAuiState,
   type ChatModelAdapter,
+  type RemoteThreadListAdapter,
+  type ThreadHistoryAdapter,
+  type ThreadMessage,
+  type ThreadMessageLike,
 } from '@assistant-ui/react'
-import { createLocalStorageAdapter, createSimpleTitleAdapter } from '@assistant-ui/core/react'
 import { api, ApiError } from './api/client'
 import { documentStore } from './documentStore'
 import { projectStore } from './projectStore'
 import { chatContext } from './chatContext'
 import { authStore } from './authStore'
 import { promptAuthorStore } from './promptAuthorStore'
-
-const browserStorage = {
-  getItem: async (key: string) => window.localStorage.getItem(key),
-  setItem: async (key: string, value: string) => window.localStorage.setItem(key, value),
-  removeItem: async (key: string) => window.localStorage.removeItem(key),
-}
 
 async function* streamResponse(text: string, sources: unknown[] = [], abortSignal?: AbortSignal) {
   const units = text.match(/\S+\s*/g) ?? [text]
@@ -93,11 +91,7 @@ const apiModel: ChatModelAdapter = {
 }
 
 export function AssistantRuntimeProvider({ children, projectId }: { children: ReactNode; projectId: string }) {
-  const threadList = useMemo(() => createLocalStorageAdapter({
-    storage: browserStorage,
-    prefix: `intellect:${projectId}:`,
-    titleGenerator: createSimpleTitleAdapter(),
-  }), [projectId])
+  const threadList = useMemo(() => createProjectThreadListAdapter(projectId), [projectId])
   const runtime = useRemoteThreadListRuntime({
     adapter: threadList,
     runtimeHook: useApiThreadRuntime,
@@ -109,8 +103,114 @@ function useApiThreadRuntime() {
   return useLocalRuntime(apiModel)
 }
 
+function createProjectThreadListAdapter(projectId: string): RemoteThreadListAdapter {
+  return {
+    async list() {
+      const threads = await api.questions.conversations.list(projectId)
+      return {
+        threads: threads.map((thread) => ({
+          status: thread.is_archived ? 'archived' as const : 'regular' as const,
+          remoteId: thread.id,
+          title: thread.title,
+          lastMessageAt: new Date(thread.updated_at),
+        })),
+      }
+    },
+    async initialize(threadId) {
+      const thread = await api.questions.conversations.create(projectId, threadId)
+      return { remoteId: thread.id }
+    },
+    async fetch(threadId) {
+      const thread = await api.questions.conversations.get(projectId, threadId)
+      return {
+        status: thread.is_archived ? 'archived' as const : 'regular' as const,
+        remoteId: thread.id,
+        title: thread.title,
+        lastMessageAt: new Date(thread.updated_at),
+      }
+    },
+    async rename(threadId, title) {
+      await api.questions.conversations.update(projectId, threadId, { title })
+    },
+    async archive(threadId) {
+      await api.questions.conversations.update(projectId, threadId, { is_archived: true })
+    },
+    async unarchive(threadId) {
+      await api.questions.conversations.update(projectId, threadId, { is_archived: false })
+    },
+    async delete(threadId) {
+      await api.questions.conversations.remove(projectId, threadId)
+    },
+    async generateTitle(threadId, messages) {
+      const title = conversationTitle(messages)
+      await api.questions.conversations.update(projectId, threadId, { title })
+      return titleStream(title)
+    },
+    unstable_useAdapters: function useProjectThreadAdapters() {
+      const threadId = useAuiState(
+        (state) => state.threadListItem.remoteId || state.threadListItem.id,
+      )
+      return useMemo(
+        () => threadId ? { history: createConversationHistory(projectId, threadId) } : null,
+        [threadId],
+      )
+    },
+  }
+}
+
+function createConversationHistory(projectId: string, threadId: string): ThreadHistoryAdapter {
+  return {
+    async load() {
+      const turns = await api.questions.conversation(projectId, threadId)
+      const messages: ThreadMessageLike[] = turns.flatMap((turn) => {
+        const createdAt = new Date(turn.created_at)
+        const userMessageId = `${turn.id}:user`
+        promptAuthorStore.set(userMessageId, turn.author)
+        return [
+          {
+            id: userMessageId,
+            role: 'user' as const,
+            content: [{ type: 'text' as const, text: turn.question }],
+            createdAt,
+          },
+          {
+            id: `${turn.id}:assistant`,
+            role: 'assistant' as const,
+            content: [{ type: 'text' as const, text: turn.answer }],
+            createdAt,
+            status: { type: 'complete' as const, reason: 'stop' as const },
+          },
+        ]
+      })
+      return ExportedMessageRepository.fromArray(messages)
+    },
+    async append() {},
+  }
+}
+
+function conversationTitle(messages: readonly ThreadMessage[]) {
+  const firstUserMessage = messages.find((message) => message.role === 'user')
+  const text = firstUserMessage?.content.find((part) => part.type === 'text')
+  const title = text?.type === 'text' ? text.text.trim() : ''
+  if (!title) return 'New conversation'
+  return title.length > 50 ? `${title.slice(0, 47)}...` : title
+}
+
+function titleStream(title: string) {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue({ type: 'part-start', path: [0], part: { type: 'text' } })
+      controller.enqueue({ type: 'text-delta', path: [0], textDelta: title })
+      controller.enqueue({ type: 'part-finish', path: [0] })
+      controller.close()
+    },
+  }) as never
+}
+
 function ThreadContextSync() {
-  const threadId = useAuiState((state) => state.threadListItem.id)
+  const threadId = useAuiState(
+    (state) => state.threadListItem.remoteId || state.threadListItem.id,
+  )
   useEffect(() => {
     chatContext.setThreadId(threadId || null)
     return () => chatContext.setThreadId(null)

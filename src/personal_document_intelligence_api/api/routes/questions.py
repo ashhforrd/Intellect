@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from personal_document_intelligence_api.api.dependencies.auth import (
@@ -18,6 +18,9 @@ from personal_document_intelligence_api.api.dependencies.rate_limit import (
     enforce_expensive_rate_limit,
 )
 from personal_document_intelligence_api.api.schemas.questions import (
+    ConversationThreadCreate,
+    ConversationThreadResponse,
+    ConversationThreadUpdate,
     ConversationTurnResponse,
     PromptAuthorResponse,
     QuestionRequest,
@@ -27,6 +30,9 @@ from personal_document_intelligence_api.api.schemas.questions import (
 from personal_document_intelligence_api.core.config import (
     Settings,
     get_settings,
+)
+from personal_document_intelligence_api.database.repositories.conversation_thread import (
+    ConversationThreadRepository,
 )
 from personal_document_intelligence_api.database.repositories.conversation_turn import (
     ConversationTurnRepository,
@@ -87,6 +93,12 @@ async def ask_question(
         Depends(enforce_expensive_rate_limit),
     ],
 ) -> QuestionResponse:
+    if await ProjectRepository(session).get_for_member(request.project_id, owner_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    user = await UserRepository(session).get_by_id(owner_id_to_user_id(owner_id))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
     search_service = SemanticSearchService(
         repository=DocumentChunkRepository(session),
         embedding_provider=embedding_provider,
@@ -116,9 +128,17 @@ async def ask_question(
             detail="AI service is unavailable",
         ) from error
 
-    user = await UserRepository(session).get_by_id(owner_id_to_user_id(owner_id))
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    thread_repository = ConversationThreadRepository(session)
+    thread = await thread_repository.get(request.project_id, request.thread_id)
+    if thread is None:
+        thread = await thread_repository.create(
+            project_id=request.project_id,
+            thread_id=request.thread_id,
+            created_by=user.id,
+            title=request.question.strip()[:120],
+        )
+    else:
+        await thread_repository.touch(thread)
     await ConversationTurnRepository(session).create(
         project_id=request.project_id,
         thread_id=request.thread_id,
@@ -146,6 +166,119 @@ async def ask_question(
             display_name=user.display_name,
         ),
     )
+
+
+async def require_project_member(
+    session: AsyncSession,
+    project_id: UUID,
+    owner_id: str,
+) -> None:
+    if await ProjectRepository(session).get_for_member(project_id, owner_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+
+@router.get(
+    "/conversations/{project_id}",
+    response_model=list[ConversationThreadResponse],
+)
+async def list_conversations(
+    project_id: UUID,
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> list[ConversationThreadResponse]:
+    await require_project_member(session, project_id, owner_id)
+    threads = await ConversationThreadRepository(session).list_for_project(project_id)
+    return [ConversationThreadResponse.model_validate(thread) for thread in threads]
+
+
+@router.post(
+    "/conversations/{project_id}",
+    response_model=ConversationThreadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_conversation(
+    project_id: UUID,
+    request: ConversationThreadCreate,
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> ConversationThreadResponse:
+    await require_project_member(session, project_id, owner_id)
+    user = await UserRepository(session).get_by_id(owner_id_to_user_id(owner_id))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    repository = ConversationThreadRepository(session)
+    existing = await repository.get(project_id, request.id)
+    if existing is not None:
+        return ConversationThreadResponse.model_validate(existing)
+    thread = await repository.create(
+        project_id=project_id,
+        thread_id=request.id,
+        created_by=user.id,
+        title=request.title,
+    )
+    await session.commit()
+    return ConversationThreadResponse.model_validate(thread)
+
+
+@router.get(
+    "/conversations/{project_id}/{thread_id}/metadata",
+    response_model=ConversationThreadResponse,
+)
+async def get_conversation(
+    project_id: UUID,
+    thread_id: str,
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> ConversationThreadResponse:
+    await require_project_member(session, project_id, owner_id)
+    thread = await ConversationThreadRepository(session).get(project_id, thread_id)
+    if thread is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+    return ConversationThreadResponse.model_validate(thread)
+
+
+@router.patch(
+    "/conversations/{project_id}/{thread_id}",
+    response_model=ConversationThreadResponse,
+)
+async def update_conversation(
+    project_id: UUID,
+    thread_id: str,
+    request: ConversationThreadUpdate,
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> ConversationThreadResponse:
+    await require_project_member(session, project_id, owner_id)
+    repository = ConversationThreadRepository(session)
+    thread = await repository.get(project_id, thread_id)
+    if thread is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+    thread = await repository.update(
+        thread,
+        title=request.title.strip() if request.title is not None else None,
+        is_archived=request.is_archived,
+    )
+    await session.commit()
+    return ConversationThreadResponse.model_validate(thread)
+
+
+@router.delete(
+    "/conversations/{project_id}/{thread_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_conversation(
+    project_id: UUID,
+    thread_id: str,
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+) -> Response:
+    await require_project_member(session, project_id, owner_id)
+    repository = ConversationThreadRepository(session)
+    thread = await repository.get(project_id, thread_id)
+    if thread is not None:
+        await repository.delete(thread)
+        await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(

@@ -125,10 +125,10 @@ function ManageMembersDialog({ projectId, open, onOpenChange }: { projectId: str
 
 function ThreadListItem({ projectId }: { projectId: string }) {
   const aui = useAui()
-  const threadId = useAuiState((state) => state.threadListItem.id)
+  const threadId = useAuiState((state) => state.threadListItem.remoteId || state.threadListItem.id)
   const title = useAuiState((state) => state.threadListItem.title) || 'this conversation'
   const [confirmOpen, setConfirmOpen] = useState(false)
-  return <ThreadListItemPrimitive.Root className={ui.threadListItem}><ThreadListItemPrimitive.Trigger><ThreadListItemPrimitive.Title fallback="New conversation" /></ThreadListItemPrimitive.Trigger><button className={ui.deleteThread} type="button" aria-label={`Delete ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); setConfirmOpen(true) }}><Trash2 size={14} /></button><ConfirmDeleteDialog open={confirmOpen} title="Delete conversation?" description={`“${title}” will be permanently removed from this browser.`} onOpenChange={setConfirmOpen} onConfirm={() => { chatGraphStore.clear(`${projectId}:${threadId}`); void aui.threads.item({ id: threadId }).delete(); setConfirmOpen(false) }} /></ThreadListItemPrimitive.Root>
+  return <ThreadListItemPrimitive.Root className={ui.threadListItem}><ThreadListItemPrimitive.Trigger><ThreadListItemPrimitive.Title fallback="New conversation" /></ThreadListItemPrimitive.Trigger><button className={ui.deleteThread} type="button" aria-label={`Delete ${title}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); setConfirmOpen(true) }}><Trash2 size={14} /></button><ConfirmDeleteDialog open={confirmOpen} title="Delete conversation?" description={`“${title}” will be permanently removed for every project member.`} onOpenChange={setConfirmOpen} onConfirm={() => { chatGraphStore.clear(`${projectId}:${threadId}`); void aui.threads.item({ id: threadId }).delete(); setConfirmOpen(false) }} /></ThreadListItemPrimitive.Root>
 }
 
 function ConfirmDeleteDialog({ open, title, description, onOpenChange, onConfirm }: { open: boolean; title: string; description: string; onOpenChange: (open: boolean) => void; onConfirm: () => void }) {
@@ -223,7 +223,7 @@ function extractTurns(messages: readonly UiMessage[]): ConversationTurn[] {
 }
 
 function IntelligencePanel({ projectId, open, onClose }: { projectId: string; open: boolean; onClose: () => void }) {
-  const threadId = useAuiState((state) => state.threadListItem.id) || 'current'
+  const threadId = useAuiState((state) => state.threadListItem.remoteId || state.threadListItem.id) || 'current'
   const messages = useAuiState((state) => state.thread.messages)
   const graphKey = `${projectId}:${threadId}`
   const graph = useChatGraph(graphKey)

@@ -64,6 +64,16 @@ export interface ConversationTurnRecord {
   author: Omit<AuthUser, 'member_id'>
 }
 
+export interface ConversationThreadRecord {
+  id: string
+  project_id: string
+  title: string
+  created_by: string
+  is_archived: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface RagEvidence {
   sources: QuestionSource[]
 }

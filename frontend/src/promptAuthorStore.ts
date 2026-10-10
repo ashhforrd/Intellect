@@ -2,7 +2,8 @@ import { useSyncExternalStore } from 'react'
 import type { AuthUser } from './api/types'
 
 const STORAGE_KEY = 'intellect-prompt-authors'
-type AuthorMap = Record<string, AuthUser>
+type PromptAuthor = Omit<AuthUser, 'member_id'>
+type AuthorMap = Record<string, PromptAuthor>
 
 function read(): AuthorMap {
   try {
@@ -16,7 +17,7 @@ let authors = read()
 const listeners = new Set<() => void>()
 
 export const promptAuthorStore = {
-  set(messageId: string, author: AuthUser) {
+  set(messageId: string, author: PromptAuthor) {
     authors = { ...authors, [messageId]: author }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(authors))
     listeners.forEach((listener) => listener())
