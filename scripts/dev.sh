@@ -8,6 +8,21 @@ WORKER_PID=""
 FRONTEND_PID=""
 CLEANED_UP=0
 
+terminate_process_tree() {
+  local pid="$1"
+  local child
+
+  if command -v pgrep >/dev/null 2>&1; then
+    for child in $(pgrep -P "$pid" 2>/dev/null || true); do
+      terminate_process_tree "$child"
+    done
+  fi
+
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+  fi
+}
+
 cleanup() {
   if [[ "$CLEANED_UP" -eq 1 ]]; then
     return
@@ -22,8 +37,8 @@ cleanup() {
   echo "Stopping Intellect development services..."
 
   for pid in "$API_PID" "$WORKER_PID" "$FRONTEND_PID"; do
-    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
+    if [[ -n "$pid" ]]; then
+      terminate_process_tree "$pid"
     fi
   done
 
@@ -70,6 +85,8 @@ fi
 
 cd "$ROOT_DIR"
 
+export AWS_PROFILE="${AWS_PROFILE:-document-intelligence}"
+
 echo "Starting PostgreSQL..."
 docker compose up -d --wait database
 
@@ -80,7 +97,7 @@ echo "Starting API on http://127.0.0.1:8000..."
 uv run uvicorn personal_document_intelligence_api.main:app --reload &
 API_PID=$!
 
-echo "Starting document worker..."
+echo "Starting document worker with AWS profile '$AWS_PROFILE'..."
 uv run python -m personal_document_intelligence_api.workers.runner &
 WORKER_PID=$!
 
