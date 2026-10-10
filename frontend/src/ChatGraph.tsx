@@ -1,21 +1,29 @@
-import { ui } from './ui'
 import { useMemo, useState } from 'react'
 import { Background, Controls, Handle, Position, ReactFlow, type Node, type NodeProps } from '@xyflow/react'
 import { type ChatGraphEdge, type ChatGraphNode } from './chatGraphStore'
-
-type GraphFlowNode = Node<{ label: string; detail: string; kind: ChatGraphNode['kind'] }, 'chatGraph'>
-
+type GraphFlowNode = Node<{
+  label: string
+  detail: string
+  kind: ChatGraphNode['kind']
+}, 'chatGraph'>
 function ExpandableGraphNode({ data }: NodeProps<GraphFlowNode>) {
   const [expanded, setExpanded] = useState(false)
-  return <button className={ui.graphNode} data-kind={data.kind} data-expanded={expanded} type="button" onClick={() => setExpanded(!expanded)} title="Click to expand">
+  return <button
+    data-kind={data.kind}
+    data-expanded={expanded}
+    type="button"
+    onClick={() => setExpanded(!expanded)}
+    title="Click to expand"
+    className="w-47.5 rounded-lg border border-neutral-600 bg-neutral-900 px-3.25 py-2.75 font-mono text-xs leading-detail whitespace-normal text-neutral-200 transition-[width,background] duration-200 hover:border-neutral-500 hover:bg-neutral-900 data-[expanded=true]:max-h-55 data-[expanded=true]:w-75 data-[expanded=true]:overflow-y-auto data-[expanded=true]:text-left data-[kind=question]:border-neutral-100! data-[kind=question]:bg-neutral-100! data-[kind=question]:text-neutral-900!"
+  >
     <Handle type="target" position={Position.Top} />
-    <span>{expanded ? data.detail : data.label}</span>
+    <span>
+      {expanded ? data.detail : data.label}
+    </span>
     <Handle type="source" position={Position.Bottom} />
   </button>
 }
-
 const nodeTypes = { chatGraph: ExpandableGraphNode }
-
 function positionNodes(items: ChatGraphNode[], edges: ChatGraphEdge[]): GraphFlowNode[] {
   const depth = new Map(items.map((item) => [item.id, 0]))
   const incoming = new Map(items.map((item) => [item.id, 0]))
@@ -29,7 +37,8 @@ function positionNodes(items: ChatGraphNode[], edges: ChatGraphEdge[]): GraphFlo
     for (const targetId of outgoing.get(nodeId) || []) {
       depth.set(targetId, Math.max(depth.get(targetId) || 0, (depth.get(nodeId) || 0) + 1))
       incoming.set(targetId, (incoming.get(targetId) || 1) - 1)
-      if (incoming.get(targetId) === 0) queue.push(targetId)
+      if (incoming.get(targetId) === 0)
+        queue.push(targetId)
     }
   }
   const layerCounts = new Map<number, number>()
@@ -45,10 +54,13 @@ function positionNodes(items: ChatGraphNode[], edges: ChatGraphEdge[]): GraphFlo
     }
   })
 }
-
-export function ChatGraph({ nodes, edges }: { nodes: ChatGraphNode[]; edges: ChatGraphEdge[] }) {
+export function ChatGraph({ nodes, edges }: {
+  nodes: ChatGraphNode[]
+  edges: ChatGraphEdge[]
+}) {
   const flowNodes = useMemo(() => positionNodes(nodes, edges), [nodes, edges])
   return <ReactFlow
+    className="chat-graph"
     nodes={flowNodes}
     edges={edges}
     nodeTypes={nodeTypes}

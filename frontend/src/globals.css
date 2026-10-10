@@ -75,43 +75,17 @@
 @custom-variant login-compact (@media (max-width: 800px));
 @custom-variant tablet (@media (max-width: 900px));
 
-/* Composed layouts use the same spacing scale as the component utilities. */
-@utility grid-cols-workspace { grid-template-columns: --spacing(70) minmax(0, 1fr) 0; }
-@utility grid-cols-workspace-closed { grid-template-columns: 0 minmax(0, 1fr) 0; }
-@utility grid-cols-workspace-graph { grid-template-columns: --spacing(70) minmax(0, 1fr) minmax(0, 1fr); }
-@utility grid-cols-workspace-closed-graph { grid-template-columns: 0 minmax(0, 1fr) minmax(0, 1fr); }
-@utility grid-cols-workspace-tablet { grid-template-columns: --spacing(60) minmax(0, 1fr) 0; }
-@utility grid-cols-account { grid-template-columns: --spacing(9.5) 1fr auto; }
-@utility grid-cols-member { grid-template-columns: 1fr auto --spacing(7.5); }
-@utility grid-cols-member-form { grid-template-columns: 1.5fr 1fr --spacing(22.5) auto; }
-@utility grid-cols-documents { grid-template-columns: minmax(--spacing(70), 1fr) --spacing(30) --spacing(27.5) --spacing(20) --spacing(20); }
-@utility grid-cols-document-mobile { grid-template-columns: 1fr auto; }
-@utility grid-cols-insight { grid-template-columns: --spacing(6.75) 1fr; }
-@utility grid-cols-source { grid-template-columns: --spacing(5) 1fr auto; }
-@utility grid-cols-login { grid-template-columns: minmax(0, 1.15fr) minmax(--spacing(105), .85fr); }
-@utility w-documents { width: min(--spacing(280), calc(100% - --spacing(16))); }
-@utility w-documents-mobile { width: calc(100% - --spacing(7.5)); }
-@utility w-login-form { width: min(--spacing(97.5), 100%); }
-@utility w-dialog { width: min(--spacing(107.5), calc(100vw - --spacing(8))); }
-@utility w-members-dialog { width: min(--spacing(145), calc(100vw - --spacing(8))); }
-@utility w-intelligence-panel { width: min(--spacing(140), 92vw); }
-@utility h-intelligence-content { height: calc(100vh - --spacing(28.75)); }
-@utility bg-composer-fade { background-image: linear-gradient(transparent, var(--color-neutral-950) 25%); }
-@utility bg-graph-pattern {
+/* Layered page surfaces. */
+@layer components {
+.graph-surface {
   background-image: radial-gradient(circle at 50% 42%, var(--color-neutral-800) 0, var(--color-neutral-900) 24%, transparent 52%), linear-gradient(var(--color-neutral-800) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-800) 1px, transparent 1px);
   background-size: auto, --spacing(8) --spacing(8), --spacing(8) --spacing(8);
 }
-@utility bg-login-pattern {
+.login-surface {
   background-image: radial-gradient(circle at 20% 30%, var(--color-neutral-800) 0, transparent 34%), linear-gradient(var(--color-neutral-900) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-900) 1px, transparent 1px);
   background-size: auto, --spacing(9) --spacing(9), --spacing(9) --spacing(9);
 }
-@utility transition-sidebar { transition: opacity .25s ease, translate .35s var(--ease-panel); }
-@utility transition-panel { transition: opacity .25s ease, translate .35s var(--ease-panel), visibility .35s; }
-@utility animation-delay-200 { animation-delay: .2s; }
-@utility animation-delay-400 { animation-delay: .4s; }
-@utility transition-rotation { transition-property: rotate; }
-@utility fill-opacity-graph-label { fill-opacity: .92; }
-@utility typing-cursor-shape { width: .055em; height: .82em; margin-left: .08em; vertical-align: -.02em; }
+}
 
 /* Retain browser defaults used by the existing UI instead of adding Preflight. */
 @layer base {
@@ -142,3 +116,43 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes dialog-fade { from { opacity: 0; } }
 @keyframes dialog-enter { from { opacity: 0; translate: -50% -47%; transform: scale(.98); } }
+
+/* Typography and vendor markup that React does not own. */
+@layer components {
+  .document-grid {
+    @apply grid items-center gap-3.75 px-4.5 py-0;
+    grid-template-columns: minmax(17.5rem, 1fr) 7.5rem 6.875rem 5rem 5rem;
+  }
+  .document-actions button {
+    @apply grid size-7.75 place-items-center rounded-md border-0 bg-transparent text-neutral-500;
+  }
+  .document-actions button:hover { @apply bg-neutral-800 text-white; }
+  .document-actions button:disabled { @apply cursor-not-allowed opacity-30; }
+  .markdown-answer { @apply text-base leading-normal text-neutral-200; }
+  .markdown-answer>:first-child { @apply mt-0; }
+  .markdown-answer p { @apply mt-0 mb-1.5; }
+  .markdown-answer h1 { @apply mt-3.25 mb-1.5 text-2xl leading-heading text-evidence-heading; }
+  .markdown-answer h2 { @apply mt-3.25 mb-1.5 text-lg leading-heading text-evidence-heading; }
+  .markdown-answer h3 { @apply mt-3.25 mb-1.5 text-lg leading-heading text-evidence-heading; }
+  .markdown-answer ul { @apply mt-0.5 mb-2 pl-5; }
+  .markdown-answer ol { @apply mt-0.5 mb-2 pl-5; }
+  .markdown-answer li { @apply my-px; }
+  .markdown-answer li+li { @apply mt-1; }
+  .markdown-answer li>p { @apply m-0; }
+  .markdown-answer strong { @apply text-evidence-heading; }
+  .markdown-answer code { @apply rounded bg-evidence-code-surface px-1 py-0.5 text-sm text-evidence-code; }
+  .markdown-answer pre { @apply my-3 overflow-auto rounded-lg border border-evidence-border bg-evidence-surface p-3; }
+  .markdown-answer pre code { @apply bg-transparent p-0; }
+  .markdown-answer blockquote { @apply my-3 mx-0 border-0 bg-transparent p-0 text-evidence-quote italic; }
+  .markdown-answer table { @apply my-3 w-full border-collapse text-sm; }
+  .markdown-answer th { @apply border border-evidence-border bg-evidence-table px-2 py-1.75 text-left text-evidence-heading; }
+  .markdown-answer td { @apply border border-evidence-border px-2 py-1.75 text-left; }
+  .message-content p { @apply m-0; }
+  .chat-graph { @apply bg-transparent!; }
+  .chat-graph .react-flow__edge-path { @apply stroke-neutral-500!; }
+  .chat-graph .react-flow__edge-text { @apply fill-neutral-300 font-mono text-2xs; }
+  .chat-graph .react-flow__edge-textbg { @apply fill-neutral-900 [fill-opacity:.92]; }
+  .chat-graph .react-flow__controls { @apply border border-neutral-700 shadow-none; }
+  .chat-graph .react-flow__controls-button { @apply border-neutral-700 bg-neutral-900 fill-neutral-200 text-neutral-200; }
+  .chat-graph .react-flow__controls-button:hover { @apply bg-neutral-800; }
+}

@@ -2,6 +2,15 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## Styling
+
+- Put one-off layout and appearance in Tailwind `className` attributes on the element being styled. Use React's `style` prop for values calculated at runtime.
+- Extract repeated UI into components in [`src/components/`](src/components/), keeping their styles with the component.
+- Keep theme tokens, base rules, shared CSS patterns, and styles for generated Markdown or React Flow markup in [`src/globals.css`](src/globals.css). Scope shared rules to their component classes.
+- Avoid a separate registry of class strings or custom utility aliases for single-use CSS declarations.
+
+Run `npm run lint` and `npm run build` from this directory after frontend changes. In Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm.ps1`.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
