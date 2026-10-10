@@ -180,13 +180,45 @@ function ProcessingStatus() { return <div className="processing-status"><OwlMasc
 
 function DocumentsPage({ projectId }: { projectId: string }) {
   const { documents, loading, error } = useDocuments()
-  const [uploading, setUploading] = useState(false)
+  const [pendingUploads, setPendingUploads] = useState<Array<{
+    id: string
+    filename: string
+    fileType: string
+    sizeBytes: number
+    status: 'uploading' | 'failed'
+    error?: string
+  }>>([])
   const [documentToDelete, setDocumentToDelete] = useState<{ id: string; filename: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  async function uploadFiles(files: FileList | File[]) { setUploading(true); try { for (const file of Array.from(files)) await documentStore.upload(file) } finally { setUploading(false); if (inputRef.current) inputRef.current.value = '' } }
+  const uploadingCount = pendingUploads.filter((item) => item.status === 'uploading').length
+
+  async function uploadFiles(files: FileList | File[]) {
+    const batch = Array.from(files).map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      filename: file.name,
+      fileType: file.name.split('.').pop()?.toUpperCase() || 'FILE',
+      sizeBytes: file.size,
+      status: 'uploading' as const,
+    }))
+    if (!batch.length) return
+    setPendingUploads((current) => [...batch, ...current])
+    if (inputRef.current) inputRef.current.value = ''
+
+    await Promise.all(batch.map(async (item) => {
+      try {
+        await documentStore.upload(item.file)
+        setPendingUploads((current) => current.filter((upload) => upload.id !== item.id))
+      } catch (uploadError) {
+        setPendingUploads((current) => current.map((upload) => upload.id === item.id
+          ? { ...upload, status: 'failed', error: uploadError instanceof Error ? uploadError.message : 'Upload failed.' }
+          : upload))
+      }
+    }))
+  }
   async function preview(id: string) { const tab = window.open('', '_blank'); try { const blob = await api.documents.content(projectId, id); const url = URL.createObjectURL(blob); if (tab) tab.location.href = url; window.setTimeout(() => URL.revokeObjectURL(url), 60_000) } catch { tab?.close() } }
 
-  return <section className="documents-page"><div className="page-heading"><div><h1>Documents</h1><p>Sources uploaded here are chunked, embedded, and indexed only inside this project.</p></div><button className="primary-button" disabled={uploading} onClick={() => inputRef.current?.click()}>{uploading ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{uploading ? 'Uploading…' : 'Upload documents'}</button><input ref={inputRef} hidden multiple type="file" accept=".pdf,.docx,.md,.txt" onChange={(event) => { if (event.target.files) void uploadFiles(event.target.files) }} /></div><button className="upload-zone" onClick={() => inputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void uploadFiles(event.dataTransfer.files) }}><Upload size={20} /><b>Drop files here or choose from your computer</b><span>PDF, DOCX, Markdown, or text · up to 50 MB each</span></button>{error && <p className="document-page-error">{error}</p>}<div className="document-table"><div className="document-table-head"><span>Document</span><span>Status</span><span>Size</span><span>Pages</span><span /></div>{loading && documents.length === 0 && <div className="document-empty"><LoaderCircle className="spin" size={18} />Loading documents…</div>}{!loading && documents.length === 0 && <div className="document-empty"><FileText size={21} />No project documents yet.</div>}{documents.map((document) => <div className="document-table-row" key={document.id}><span className="document-name"><i><FileText size={16} /></i><span><b>{document.filename}</b><small>{document.file_type.toUpperCase()}</small></span></span><span><em className={`document-status ${document.status}`}>{document.status}</em></span><span>{formatBytes(document.size_bytes)}</span><span>{document.page_count ?? '—'}</span><span className="row-actions"><button disabled={document.status !== 'ready'} title="Preview" onClick={() => void preview(document.id)}><Eye size={15} /></button><button title="Delete" onClick={() => setDocumentToDelete({ id: document.id, filename: document.filename })}><Trash2 size={15} /></button></span></div>)}</div><ConfirmDeleteDialog open={documentToDelete !== null} title="Delete document?" description={documentToDelete ? `${documentToDelete.filename} and all indexed data will be permanently deleted from this project.` : ''} onOpenChange={(open) => { if (!open) setDocumentToDelete(null) }} onConfirm={() => { if (documentToDelete) void documentStore.remove(documentToDelete.id); setDocumentToDelete(null) }} /></section>
+  return <section className="documents-page"><div className="page-heading"><div><h1>Documents</h1><p>Sources uploaded here are chunked, embedded, and indexed only inside this project.</p></div><button className="primary-button" onClick={() => inputRef.current?.click()}>{uploadingCount > 0 ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{uploadingCount > 0 ? `${uploadingCount} uploading` : 'Upload documents'}</button><input ref={inputRef} hidden multiple type="file" accept=".pdf,.docx,.md,.txt" onChange={(event) => { if (event.target.files) void uploadFiles(event.target.files) }} /></div><button className="upload-zone" onClick={() => inputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void uploadFiles(event.dataTransfer.files) }}><Upload size={20} /><b>Drop multiple files here or choose from your computer</b><span>PDF, DOCX, Markdown, or text · up to 50 MB each</span></button>{error && <p className="document-page-error">{error}</p>}<div className="document-table"><div className="document-table-head"><span>Document</span><span>Status</span><span>Size</span><span>Pages</span><span /></div>{loading && documents.length === 0 && pendingUploads.length === 0 && <div className="document-empty"><LoaderCircle className="spin" size={18} />Loading documents…</div>}{!loading && documents.length === 0 && pendingUploads.length === 0 && <div className="document-empty"><FileText size={21} />No project documents yet.</div>}{pendingUploads.map((upload) => <div className="document-table-row pending-upload-row" key={upload.id}><span className="document-name"><i>{upload.status === 'uploading' ? <LoaderCircle className="spin" size={16} /> : <FileText size={16} />}</i><span><b>{upload.filename}</b><small>{upload.status === 'failed' ? upload.error : upload.fileType}</small></span></span><span><em className={`document-status ${upload.status}`}>{upload.status}</em></span><span>{formatBytes(upload.sizeBytes)}</span><span>—</span><span className="row-actions">{upload.status === 'failed' && <button title="Dismiss" aria-label={`Dismiss ${upload.filename}`} onClick={() => setPendingUploads((current) => current.filter((item) => item.id !== upload.id))}><X size={15} /></button>}</span></div>)}{documents.map((document) => <div className="document-table-row" key={document.id}><span className="document-name"><i><FileText size={16} /></i><span><b>{document.filename}</b><small>{document.file_type.toUpperCase()}</small></span></span><span><em className={`document-status ${document.status}`}>{document.status}</em></span><span>{formatBytes(document.size_bytes)}</span><span>{document.page_count ?? '—'}</span><span className="row-actions"><button disabled={document.status !== 'ready'} title="Preview" onClick={() => void preview(document.id)}><Eye size={15} /></button><button title="Delete" onClick={() => setDocumentToDelete({ id: document.id, filename: document.filename })}><Trash2 size={15} /></button></span></div>)}</div><ConfirmDeleteDialog open={documentToDelete !== null} title="Delete document?" description={documentToDelete ? `${documentToDelete.filename} and all indexed data will be permanently deleted from this project.` : ''} onOpenChange={(open) => { if (!open) setDocumentToDelete(null) }} onConfirm={() => { if (documentToDelete) void documentStore.remove(documentToDelete.id); setDocumentToDelete(null) }} /></section>
 }
 
 function formatBytes(bytes: number) { return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB` }
