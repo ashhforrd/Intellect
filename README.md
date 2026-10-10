@@ -304,6 +304,19 @@ npm run dev
 
 The frontend is available at <http://localhost:5173>.
 
+### Run the complete development stack
+
+After configuring `.env` and installing the backend and frontend dependencies,
+start PostgreSQL, apply migrations, and run the API, document worker, and
+frontend from one terminal:
+
+```bash
+./scripts/dev.sh
+```
+
+Press `Ctrl+C` to stop the API, worker, and frontend. PostgreSQL remains
+available in Docker so subsequent starts do not need to recreate the database.
+
 ### Demo accounts
 
 The development migration seeds three members into the shared workspace:
