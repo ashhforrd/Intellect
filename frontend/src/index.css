@@ -1,2 +1,144 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-:root{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#1d2738;background:#fff;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}body{min-width:320px;min-height:100vh;margin:0}button:focus-visible,textarea:focus-visible{outline:2px solid #8db2f4;outline-offset:2px}
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import '@xyflow/react/dist/style.css' layer(components);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme {
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: normal;
+  --text-xs--line-height: normal;
+  --text-sm--line-height: normal;
+  --text-base--line-height: normal;
+  --text-lg--line-height: normal;
+  --text-2xl--line-height: normal;
+  --text-3xl--line-height: normal;
+  --text-hero: clamp(2.375rem, 5vw, 4.25rem);
+  --text-hero--line-height: 1.03;
+
+  /* The neutral scale retains the workspace's monochrome palette. */
+  --color-neutral-950: #090909;
+  --color-neutral-900: #141414;
+  --color-neutral-800: #292929;
+  --color-neutral-700: #3a3a3a;
+  --color-neutral-600: #555;
+  --color-neutral-500: #777;
+  --color-neutral-400: #999;
+  --color-neutral-300: #bbb;
+  --color-neutral-200: #ddd;
+  --color-neutral-100: #eee;
+  --color-neutral-50: #f5f5f5;
+  --color-accent: #3b73da;
+  --color-surface: #0d0d0d;
+  --color-selection: #315fae;
+  --color-danger: #e48a8a;
+  --color-evidence-muted: #718096;
+  --color-evidence-icon: #7e8ca0;
+  --color-evidence-quote: #9faabb;
+  --color-evidence-code: #b8d1ff;
+  --color-evidence-text: #cfd8e5;
+  --color-evidence-heading: #eef3f9;
+  --color-evidence-surface: #121721;
+  --color-evidence-table: #18202d;
+  --color-evidence-hover: #1b2432;
+  --color-evidence-code-surface: #202b3c;
+  --color-evidence-border: #303a48;
+
+  --leading-hero: 1.03;
+  --leading-heading: 1.35;
+  --leading-detail: 1.45;
+  --leading-copy: 1.55;
+  --leading-body: 1.6;
+  --tracking-brand: -0.04em;
+  --tracking-title: -0.035em;
+  --tracking-welcome: -0.045em;
+  --tracking-hero: -0.055em;
+  --tracking-table: 0.08em;
+  --tracking-label: 0.13em;
+  --tracking-eyebrow: 0.14em;
+  --radius-user-message: 0.8125rem 0.8125rem 0.1875rem 0.8125rem;
+  --shadow-dialog: 0 1.5rem 5rem #000a;
+  --shadow-drawer: -0.9375rem 0 2.5rem #18243918;
+  --ease-panel: cubic-bezier(.22, 1, .36, 1);
+  --animate-dialog-enter: dialog-enter .18s ease-out;
+  --animate-dialog-fade: dialog-fade .16s ease-out;
+  --animate-process-pulse: process-pulse 1.2s ease-in-out infinite;
+  --animate-upload-pulse: upload-pulse 1.2s ease-in-out infinite;
+  --animate-document-spin: spin .9s linear infinite;
+  --animate-typing-cursor: typing-cursor-blink .72s steps(1) infinite;
+  --animate-typing-finish: typing-cursor-finish .7s forwards;
+}
+
+@custom-variant mobile (@media (max-width: 640px));
+@custom-variant compact (@media (max-width: 760px));
+@custom-variant login-compact (@media (max-width: 800px));
+@custom-variant tablet (@media (max-width: 900px));
+
+/* Composed layouts use the same spacing scale as the component utilities. */
+@utility grid-cols-workspace { grid-template-columns: --spacing(70) minmax(0, 1fr) 0; }
+@utility grid-cols-workspace-closed { grid-template-columns: 0 minmax(0, 1fr) 0; }
+@utility grid-cols-workspace-graph { grid-template-columns: --spacing(70) minmax(0, 1fr) minmax(0, 1fr); }
+@utility grid-cols-workspace-closed-graph { grid-template-columns: 0 minmax(0, 1fr) minmax(0, 1fr); }
+@utility grid-cols-workspace-tablet { grid-template-columns: --spacing(60) minmax(0, 1fr) 0; }
+@utility grid-cols-account { grid-template-columns: --spacing(9.5) 1fr auto; }
+@utility grid-cols-member { grid-template-columns: 1fr auto --spacing(7.5); }
+@utility grid-cols-member-form { grid-template-columns: 1.5fr 1fr --spacing(22.5) auto; }
+@utility grid-cols-documents { grid-template-columns: minmax(--spacing(70), 1fr) --spacing(30) --spacing(27.5) --spacing(20) --spacing(20); }
+@utility grid-cols-document-mobile { grid-template-columns: 1fr auto; }
+@utility grid-cols-insight { grid-template-columns: --spacing(6.75) 1fr; }
+@utility grid-cols-source { grid-template-columns: --spacing(5) 1fr auto; }
+@utility grid-cols-login { grid-template-columns: minmax(0, 1.15fr) minmax(--spacing(105), .85fr); }
+@utility w-documents { width: min(--spacing(280), calc(100% - --spacing(16))); }
+@utility w-documents-mobile { width: calc(100% - --spacing(7.5)); }
+@utility w-login-form { width: min(--spacing(97.5), 100%); }
+@utility w-dialog { width: min(--spacing(107.5), calc(100vw - --spacing(8))); }
+@utility w-members-dialog { width: min(--spacing(145), calc(100vw - --spacing(8))); }
+@utility w-intelligence-panel { width: min(--spacing(140), 92vw); }
+@utility h-intelligence-content { height: calc(100vh - --spacing(28.75)); }
+@utility bg-composer-fade { background-image: linear-gradient(transparent, var(--color-neutral-950) 25%); }
+@utility bg-graph-pattern {
+  background-image: radial-gradient(circle at 50% 42%, var(--color-neutral-800) 0, var(--color-neutral-900) 24%, transparent 52%), linear-gradient(var(--color-neutral-800) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-800) 1px, transparent 1px);
+  background-size: auto, --spacing(8) --spacing(8), --spacing(8) --spacing(8);
+}
+@utility bg-login-pattern {
+  background-image: radial-gradient(circle at 20% 30%, var(--color-neutral-800) 0, transparent 34%), linear-gradient(var(--color-neutral-900) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-900) 1px, transparent 1px);
+  background-size: auto, --spacing(9) --spacing(9), --spacing(9) --spacing(9);
+}
+@utility transition-sidebar { transition: opacity .25s ease, translate .35s var(--ease-panel); }
+@utility transition-panel { transition: opacity .25s ease, translate .35s var(--ease-panel), visibility .35s; }
+@utility animation-delay-200 { animation-delay: .2s; }
+@utility animation-delay-400 { animation-delay: .4s; }
+@utility transition-rotation { transition-property: rotate; }
+@utility fill-opacity-graph-label { fill-opacity: .92; }
+@utility typing-cursor-shape { width: .055em; height: .82em; margin-left: .08em; vertical-align: -.02em; }
+
+/* Retain browser defaults used by the existing UI instead of adding Preflight. */
+@layer base {
+  :root {
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+    color-scheme: dark;
+    color: var(--color-neutral-100);
+    background: var(--color-neutral-950);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  * { box-sizing: border-box; }
+  body { @apply min-w-80 min-h-screen m-0 bg-neutral-950 text-sm text-neutral-100; }
+  button, textarea { font: inherit; }
+  button, input, textarea { font-size: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, textarea:focus-visible { outline: none; }
+  ::selection { @apply text-white bg-selection; }
+}
+
+@keyframes typing-cursor-blink { 50% { opacity: 0; } }
+@keyframes typing-cursor-finish { 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes process-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; box-shadow: 0 0 --spacing(1.75) var(--color-accent); } }
+@keyframes upload-pulse { 50% { opacity: .25; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes dialog-fade { from { opacity: 0; } }
+@keyframes dialog-enter { from { opacity: 0; translate: -50% -47%; transform: scale(.98); } }

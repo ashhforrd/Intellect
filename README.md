@@ -195,6 +195,8 @@ Current backend test status:
 
 - React and TypeScript
 - Vite
+- Tailwind CSS v4 (Vite plugin; theme tokens in `frontend/src/index.css` and
+  shared utility classes in `frontend/src/ui.ts`)
 - assistant-ui
 - React Flow
 - JetBrains Mono

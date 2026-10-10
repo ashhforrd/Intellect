@@ -1,13 +1,13 @@
+import { ui } from './ui'
 import { useMemo, useState } from 'react'
 import { Background, Controls, Handle, Position, ReactFlow, type Node, type NodeProps } from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
 import { type ChatGraphEdge, type ChatGraphNode } from './chatGraphStore'
 
 type GraphFlowNode = Node<{ label: string; detail: string; kind: ChatGraphNode['kind'] }, 'chatGraph'>
 
 function ExpandableGraphNode({ data }: NodeProps<GraphFlowNode>) {
   const [expanded, setExpanded] = useState(false)
-  return <button className={`chat-graph-node ${data.kind} ${expanded ? 'expanded' : ''}`} type="button" onClick={() => setExpanded(!expanded)} title="Click to expand">
+  return <button className={ui.graphNode} data-kind={data.kind} data-expanded={expanded} type="button" onClick={() => setExpanded(!expanded)} title="Click to expand">
     <Handle type="target" position={Position.Top} />
     <span>{expanded ? data.detail : data.label}</span>
     <Handle type="source" position={Position.Bottom} />
@@ -59,7 +59,7 @@ export function ChatGraph({ nodes, edges }: { nodes: ChatGraphNode[]; edges: Cha
     nodesConnectable={false}
     colorMode="dark"
   >
-    <Background color="#343434" gap={22} size={1} />
+    <Background color="var(--color-neutral-700)" gap={22} size={1} />
     <Controls showInteractive={false} />
   </ReactFlow>
 }
