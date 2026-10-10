@@ -96,3 +96,59 @@ async def test_process_document_successfully() -> None:
     )
     repository.mark_ready.assert_awaited_once_with(document, 1)
     assert session.commit.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_skip_job_when_document_was_already_deleted() -> None:
+    session = AsyncMock(spec=AsyncSession)
+    repository = AsyncMock(spec=DocumentRepository)
+    repository.get_by_id_internal.return_value = None
+    processor = DocumentProcessor(
+        session=session,
+        repository=repository,
+        section_repository=AsyncMock(spec=DocumentSectionRepository),
+        chunk_repository=AsyncMock(spec=DocumentChunkRepository),
+        storage=Mock(spec=FileStorage),
+        extraction_service=Mock(spec=DocumentExtractionService),
+        embedding_provider=Mock(spec=EmbeddingProvider),
+    )
+
+    result = await processor.process(uuid4())
+
+    assert result is False
+    repository.mark_processing.assert_not_awaited()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_skip_retry_when_document_is_deleted_during_processing() -> None:
+    session = AsyncMock(spec=AsyncSession)
+    repository = AsyncMock(spec=DocumentRepository)
+    document = Document(
+        id=uuid4(),
+        owner_id="user-123",
+        project_id=uuid4(),
+        filename="document.pdf",
+        file_type="pdf",
+        storage_key="documents/123/document.pdf",
+        size_bytes=100,
+        status=DocumentStatus.UPLOADED,
+    )
+    repository.get_by_id_internal.side_effect = [document, None]
+    storage = Mock(spec=FileStorage)
+    storage.read.side_effect = FileNotFoundError("document was deleted")
+    processor = DocumentProcessor(
+        session=session,
+        repository=repository,
+        section_repository=AsyncMock(spec=DocumentSectionRepository),
+        chunk_repository=AsyncMock(spec=DocumentChunkRepository),
+        storage=storage,
+        extraction_service=Mock(spec=DocumentExtractionService),
+        embedding_provider=Mock(spec=EmbeddingProvider),
+    )
+
+    result = await processor.process(document.id)
+
+    assert result is False
+    session.rollback.assert_awaited_once()
+    repository.mark_failed.assert_not_awaited()

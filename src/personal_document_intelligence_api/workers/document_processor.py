@@ -106,11 +106,16 @@ class DocumentProcessor:
 
             document = await self.repository.get_by_id_internal(document_id)
 
-            if document is not None:
-                await self.repository.mark_failed(
-                    document,
-                    str(error),
-                )
-                await self.session.commit()
+            # The document may have been deleted while extraction or embedding
+            # was running. Treat that as a successfully cancelled job so the
+            # queue message is acknowledged instead of retried indefinitely.
+            if document is None:
+                return False
+
+            await self.repository.mark_failed(
+                document,
+                str(error),
+            )
+            await self.session.commit()
 
             raise DocumentProcessingError(f"Could not process document: {document_id}") from error

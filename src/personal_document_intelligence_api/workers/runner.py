@@ -60,14 +60,20 @@ async def run_worker() -> None:
                         embedding_provider=embedding_provider,
                     )
 
-                    await processor.process(document_id)
+                    processed = await processor.process(document_id)
 
                 await asyncio.to_thread(
                     queue.delete_message,
                     message.receipt_handle,
                 )
 
-                logger.info("Processed document %s", document_id)
+                if processed:
+                    logger.info("Processed document %s", document_id)
+                else:
+                    logger.info(
+                        "Skipped job for deleted document %s",
+                        document_id,
+                    )
 
             except (KeyError, ValueError, json.JSONDecodeError):
                 logger.exception("Invalid queue message")
