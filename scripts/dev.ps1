@@ -42,6 +42,57 @@ function Assert-Command {
     return $command.Source
 }
 
+function Refresh-ProcessPath {
+    $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $extraPaths = @(
+        (Join-Path $HOME ".local\bin"),
+        "C:\Program Files\Docker\Docker\resources\bin",
+        "C:\Program Files\Tesseract-OCR"
+    )
+    $env:Path = (@($machinePath, $userPath) + $extraPaths | Where-Object { $_ }) -join ";"
+}
+
+function Install-WingetDependency {
+    param(
+        [Parameter(Mandatory)][string]$Command,
+        [Parameter(Mandatory)][string]$PackageId
+    )
+
+    if (Get-Command $Command -ErrorAction SilentlyContinue) { return }
+
+    $winget = Get-Command "winget.exe" -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        throw "Required command '$Command' is missing. Install '$PackageId' manually or install WinGet, then rerun this script."
+    }
+
+    Write-Host "Installing missing dependency: $PackageId..."
+    & $winget.Source install `
+        --id $PackageId `
+        --exact `
+        --silent `
+        --accept-package-agreements `
+        --accept-source-agreements
+    Assert-LastCommand "$PackageId installation"
+    Refresh-ProcessPath
+
+    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) {
+        throw "$PackageId was installed, but '$Command' is not available yet. Open a new PowerShell window and rerun this script."
+    }
+}
+
+function Test-DockerAvailable {
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        & docker info 2>$null | Out-Null
+        return $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+
 function Assert-PortAvailable {
     param([Parameter(Mandatory)][int]$Port)
 
@@ -111,11 +162,33 @@ if ($missingSettings.Count -gt 0) {
 }
 
 try {
+    Install-WingetDependency -Command "uv.exe" -PackageId "astral-sh.uv"
+    Install-WingetDependency -Command "node.exe" -PackageId "OpenJS.NodeJS.LTS"
+    Install-WingetDependency -Command "npm.cmd" -PackageId "OpenJS.NodeJS.LTS"
+    Install-WingetDependency -Command "tesseract.exe" -PackageId "UB-Mannheim.TesseractOCR"
+    Install-WingetDependency -Command "docker.exe" -PackageId "Docker.DockerDesktop"
+
     $uv = Assert-Command "uv"
     $npm = Assert-Command "npm.cmd"
     $null = Assert-Command "node"
     $null = Assert-Command "docker"
     $null = Assert-Command "tesseract"
+
+    if (-not (Test-DockerAvailable)) {
+        $dockerDesktop = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+        if (Test-Path $dockerDesktop) {
+            Write-Host "Starting Docker Desktop..."
+            Start-Process -FilePath $dockerDesktop | Out-Null
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+                Start-Sleep -Seconds 2
+                if (Test-DockerAvailable) { break }
+            }
+        }
+    }
+
+    if (-not (Test-DockerAvailable)) {
+        throw "Docker is installed, but its daemon is not available. Start Docker Desktop and rerun this script."
+    }
 
     & docker compose version | Out-Null
     Assert-LastCommand "Docker Compose validation"

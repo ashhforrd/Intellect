@@ -256,9 +256,13 @@ production deployment is not currently included in this repository.
 - An OpenAI API key
 - AWS credentials only when using S3 or the optional SQS queue backend
 
-The development script starts PostgreSQL with pgvector in Docker, so a separate
-PostgreSQL installation is not needed. It checks for the local tools and stops
-with a list if any are missing; install them using the instructions below.
+The development launchers bootstrap most prerequisites automatically. On
+macOS, `scripts/dev.sh` uses Homebrew. On Windows, `scripts/dev.ps1` uses
+WinGet. They install missing uv, Node.js/npm, Docker Desktop, and Tesseract,
+start Docker Desktop when possible, synchronize Python dependencies, and
+install frontend packages when `node_modules` is absent. A separate PostgreSQL
+installation is not needed. Linux users without Homebrew should install the
+prerequisites below using their distribution package manager.
 
 ### Install prerequisites
 
@@ -276,19 +280,21 @@ The Docker installation must include the Compose plugin.
 
 #### macOS
 
-With [Homebrew](https://brew.sh/) installed:
+Only [Homebrew](https://brew.sh/) needs to be installed manually. The launcher
+installs the remaining supported dependencies. To install them ahead of time:
 
 ```bash
-brew install git python@3.12 node@24 tesseract
-curl -LsSf https://astral.sh/uv/install.sh | sh
+brew install git uv node tesseract
+brew install --cask docker
 ```
 
-Install Docker Desktop from the [official macOS instructions](https://docs.docker.com/desktop/setup/install/mac-install/).
+Docker Desktop may require its initial setup to be completed once after it is
+installed.
 
 #### Windows
 
-Run these commands in PowerShell. Git for Windows includes Git Bash, which is
-the shell to use for `scripts/dev.sh`:
+The PowerShell launcher installs supported missing dependencies through WinGet.
+To install them ahead of time:
 
 ```powershell
 winget install --id Git.Git -e
@@ -296,7 +302,7 @@ winget install --id Python.Python.3.12 -e
 winget install --id OpenJS.NodeJS.LTS -e
 winget install --id Docker.DockerDesktop -e
 winget install --id UB-Mannheim.TesseractOCR -e
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+winget install --id astral-sh.uv -e
 ```
 
 You can also download [Git for Windows](https://git-scm.com/download/win),

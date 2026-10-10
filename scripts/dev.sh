@@ -56,20 +56,64 @@ handle_signal() {
 trap cleanup EXIT
 trap handle_signal INT TERM
 
-for command in docker uv npm; do
-  if ! command -v "$command" >/dev/null 2>&1; then
-    echo "Required command not found: $command" >&2
+install_with_homebrew() {
+  local command_name="$1"
+  local package_name="$2"
+  local install_kind="${3:-formula}"
+
+  if command -v "$command_name" >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "Required command not found: $command_name" >&2
+    echo "Install Homebrew from https://brew.sh or install $package_name manually, then rerun this script." >&2
     exit 1
   fi
-done
+
+  echo "Installing missing dependency: $package_name..."
+  if [[ "$install_kind" == "cask" ]]; then
+    brew install --cask "$package_name"
+  else
+    brew install "$package_name"
+  fi
+  hash -r
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "$package_name was installed, but $command_name is not available in this shell yet." >&2
+    echo "Open a new terminal and run this script again." >&2
+    exit 1
+  fi
+}
+
+install_with_homebrew uv uv
+install_with_homebrew node node
+install_with_homebrew npm node
+install_with_homebrew tesseract tesseract
+install_with_homebrew docker docker cask
+
+if ! docker info >/dev/null 2>&1; then
+  if [[ "$(uname -s)" == "Darwin" ]] && [[ -d "/Applications/Docker.app" ]]; then
+    echo "Starting Docker Desktop..."
+    open -a Docker
+    for _ in {1..60}; do
+      if docker info >/dev/null 2>&1; then
+        break
+      fi
+      sleep 2
+    done
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    echo "Docker is installed, but its daemon is not available. Start Docker Desktop and rerun this script." >&2
+    exit 1
+  fi
+fi
+
+docker compose version >/dev/null
 
 if [[ ! -f "$ROOT_DIR/.env" ]]; then
   echo "Missing $ROOT_DIR/.env. Copy .env.example and configure it first." >&2
-  exit 1
-fi
-
-if [[ ! -d "$ROOT_DIR/frontend/node_modules" ]]; then
-  echo "Frontend dependencies are missing. Run: cd frontend && npm install" >&2
   exit 1
 fi
 
@@ -84,6 +128,14 @@ if command -v lsof >/dev/null 2>&1; then
 fi
 
 cd "$ROOT_DIR"
+
+echo "Syncing Python dependencies..."
+uv sync --locked
+
+if [[ ! -d "$ROOT_DIR/frontend/node_modules" ]]; then
+  echo "Installing frontend dependencies..."
+  npm --prefix "$ROOT_DIR/frontend" ci
+fi
 
 database_url="$(grep -E '^DATABASE_URL=' .env | tail -n 1 | cut -d= -f2-)"
 if [[ "$database_url" == *"localhost"* || "$database_url" == *"127.0.0.1"* ]]; then
