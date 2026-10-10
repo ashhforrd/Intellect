@@ -147,8 +147,17 @@ try {
     if ((Get-EnvFileValue "JOB_QUEUE_BACKEND") -eq "redis") {
         $redisUrl = Get-EnvFileValue "REDIS_URL"
         if ($redisUrl -match "localhost|127\.0\.0\.1") {
-            & $uv run python -c "import sys; from redis import Redis; Redis.from_url(sys.argv[1]).ping()" $redisUrl 2>$null
-            if ($LASTEXITCODE -eq 0) {
+            $previousErrorActionPreference = $ErrorActionPreference
+            try {
+                $ErrorActionPreference = "Continue"
+                & $uv run python -c "import sys; from redis import Redis; Redis.from_url(sys.argv[1]).ping()" $redisUrl 2>$null | Out-Null
+                $redisAvailable = $LASTEXITCODE -eq 0
+            }
+            finally {
+                $ErrorActionPreference = $previousErrorActionPreference
+            }
+
+            if ($redisAvailable) {
                 Write-Host "Using Redis already running at $redisUrl."
             }
             else {
