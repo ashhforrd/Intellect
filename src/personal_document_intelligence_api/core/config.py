@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     storage_backend: Literal["local", "s3"] = "local"
     aws_region: str = "ap-southeast-2"
     s3_bucket_name: str | None = None
+    job_queue_backend: Literal["local", "sqs"] = "local"
+    local_queue_path: Path = Path("./data/jobs")
     sqs_queue_url: str | None = None
     openai_api_key: SecretStr | None = None
     embedding_model: str = "text-embedding-3-small"

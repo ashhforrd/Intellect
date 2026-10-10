@@ -252,7 +252,7 @@ production deployment is not currently included in this repository.
 - Docker with Docker Compose
 - Tesseract OCR
 - An OpenAI API key
-- AWS credentials when using S3 and SQS
+- AWS credentials only when using S3 or the optional SQS queue backend
 
 The development script starts PostgreSQL with pgvector in Docker, so a separate
 PostgreSQL installation is not needed. It checks for the local tools and stops
@@ -357,6 +357,17 @@ Then update the remaining required database, OpenAI, storage, and queue
 settings. Each developer should generate their own session secret. Never commit
 `.env`, the generated secret, or any real credentials.
 
+Local development uses the filesystem-backed queue by default and does not
+require AWS credentials:
+
+```dotenv
+JOB_QUEUE_BACKEND=local
+LOCAL_QUEUE_PATH=./data/jobs
+```
+
+Set `JOB_QUEUE_BACKEND=sqs` and configure `SQS_QUEUE_URL` only when testing the
+AWS queue integration.
+
 ### 3. Run database migrations
 
 ```bash
@@ -366,7 +377,6 @@ uv run alembic upgrade head
 ### 4. Start the API
 
 ```bash
-AWS_PROFILE=document-intelligence \
 uv run uvicorn personal_document_intelligence_api.main:app --reload
 ```
 
@@ -377,7 +387,6 @@ API documentation is available at <http://127.0.0.1:8000/docs>.
 Open a second terminal:
 
 ```bash
-AWS_PROFILE=document-intelligence \
 uv run python -m personal_document_intelligence_api.workers.runner
 ```
 

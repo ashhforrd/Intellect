@@ -42,6 +42,9 @@ async def run_worker() -> None:
 
     while True:
         messages = await asyncio.to_thread(queue.receive_messages)
+        if not messages:
+            await asyncio.sleep(0.5)
+            continue
         embedding_provider = create_embedding_provider()
 
         for message in messages:

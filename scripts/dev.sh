@@ -85,8 +85,6 @@ fi
 
 cd "$ROOT_DIR"
 
-export AWS_PROFILE="${AWS_PROFILE:-document-intelligence}"
-
 echo "Starting PostgreSQL..."
 docker compose up -d --wait database
 
@@ -97,7 +95,7 @@ echo "Starting API on http://127.0.0.1:8000..."
 uv run uvicorn personal_document_intelligence_api.main:app --reload &
 API_PID=$!
 
-echo "Starting document worker with AWS profile '$AWS_PROFILE'..."
+echo "Starting document worker..."
 uv run python -m personal_document_intelligence_api.workers.runner &
 WORKER_PID=$!
 

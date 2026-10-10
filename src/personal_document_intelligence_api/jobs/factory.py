@@ -3,6 +3,7 @@ import boto3
 from personal_document_intelligence_api.core.config import Settings, get_settings
 
 from .base import JobQueue
+from .local import LocalFileJobQueue
 from .sqs import SqsJobQueue
 
 
@@ -13,8 +14,11 @@ class JobQueueConfigurationError(Exception):
 def create_job_queue(settings: Settings | None = None) -> JobQueue:
     settings = settings or get_settings()
 
+    if settings.job_queue_backend == "local":
+        return LocalFileJobQueue(settings.local_queue_path)
+
     if not settings.sqs_queue_url:
-        raise JobQueueConfigurationError("SQS_QUEUE_URL is required")
+        raise JobQueueConfigurationError("SQS_QUEUE_URL is required when JOB_QUEUE_BACKEND=sqs")
 
     client = boto3.client(
         "sqs",

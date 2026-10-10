@@ -84,11 +84,14 @@ function Stop-DevelopmentProcesses {
 if (-not (Test-Path $EnvFile)) {
     Copy-Item (Join-Path $RootDir ".env.example") $EnvFile
     Write-Host "Created .env from .env.example."
-    Write-Host "Fill in OPENAI_API_KEY, SQS_QUEUE_URL, and any storage or AWS settings, then run this script again."
+    Write-Host "Fill in OPENAI_API_KEY and any storage or queue settings, then run this script again."
     exit 0
 }
 
-$requiredSettings = @("OPENAI_API_KEY", "SQS_QUEUE_URL")
+$requiredSettings = @("OPENAI_API_KEY")
+if ((Get-EnvFileValue "JOB_QUEUE_BACKEND") -eq "sqs") {
+    $requiredSettings += "SQS_QUEUE_URL"
+}
 if ((Get-EnvFileValue "STORAGE_BACKEND") -eq "s3") {
     $requiredSettings += "S3_BUCKET_NAME"
 }
@@ -124,10 +127,6 @@ try {
         Assert-LastCommand "Frontend dependency installation"
     }
 
-    if ([string]::IsNullOrWhiteSpace($env:AWS_PROFILE)) {
-        $env:AWS_PROFILE = "document-intelligence"
-    }
-
     Write-Host "Starting PostgreSQL..."
     & docker compose up -d --wait database
     Assert-LastCommand "PostgreSQL startup"
@@ -143,7 +142,7 @@ try {
         -WorkingDirectory $RootDir
 
     $worker = Start-DevelopmentProcess `
-        -Name "document worker with AWS profile '$($env:AWS_PROFILE)'" `
+        -Name "document worker" `
         -FilePath $uv `
         -ArgumentList @("run", "python", "-m", "personal_document_intelligence_api.workers.runner") `
         -WorkingDirectory $RootDir
