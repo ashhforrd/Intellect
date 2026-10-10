@@ -245,13 +245,69 @@ production deployment is not currently included in this repository.
 
 ### Prerequisites
 
-- Python 3.12
+- Git (Git Bash on Windows, or Bash on Linux/macOS)
+- Python 3.12 or newer
 - uv
 - Node.js
-- PostgreSQL with pgvector
+- Docker with Docker Compose
 - Tesseract OCR
 - An OpenAI API key
 - AWS credentials when using S3 and SQS
+
+The development script starts PostgreSQL with pgvector in Docker, so a separate
+PostgreSQL installation is not needed. It checks for the local tools and stops
+with a list if any are missing; install them using the instructions below.
+
+### Install prerequisites
+
+#### Linux (Ubuntu/Debian)
+
+```bash
+sudo apt update
+sudo apt install git python3.12 python3.12-venv tesseract-ocr
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Install Node.js from the [official downloads page](https://nodejs.org/en/download/)
+and Docker Engine with the [official instructions for your Linux distribution](https://docs.docker.com/engine/install/).
+The Docker installation must include the Compose plugin.
+
+#### macOS
+
+With [Homebrew](https://brew.sh/) installed:
+
+```bash
+brew install git python@3.12 node@24 tesseract
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Install Docker Desktop from the [official macOS instructions](https://docs.docker.com/desktop/setup/install/mac-install/).
+
+#### Windows
+
+Run these commands in PowerShell. Git for Windows includes Git Bash, which is
+the shell to use for `scripts/dev.sh`:
+
+```powershell
+winget install --id Git.Git -e
+winget install --id Python.Python.3.12 -e
+winget install --id OpenJS.NodeJS.LTS -e
+winget install --id Docker.DockerDesktop -e
+winget install --id UB-Mannheim.TesseractOCR -e
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+You can also download [Git for Windows](https://git-scm.com/download/win),
+[Python](https://www.python.org/downloads/windows/), [Node.js](https://nodejs.org/en/download/),
+[Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/),
+and [Tesseract for Windows](https://github.com/UB-Mannheim/tesseract/wiki) from their project pages.
+After installation, restart the terminal so its `PATH` includes the new commands.
+If using WSL instead of Git Bash, install the Linux prerequisites inside WSL as
+well; Windows-installed commands are not automatically available there.
+
+Create an [OpenAI API key](https://platform.openai.com/api-keys). For S3 or SQS,
+configure [AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
+for the profile used by the script.
 
 ### 1. Clone and install
 
@@ -336,9 +392,12 @@ The frontend is available at <http://localhost:5173>.
 
 ### Run the complete development stack
 
-After configuring `.env` and installing the backend and frontend dependencies,
-start PostgreSQL, apply migrations, and run the API, document worker, and
-frontend from one terminal:
+Run the script from the repository root. On the first run, it creates `.env`
+from `.env.example` and exits so you can add the OpenAI key, SQS queue URL, and
+other required settings. On later runs, it checks the required tools and
+configuration, syncs Python dependencies, installs frontend dependencies if
+they are missing, starts PostgreSQL, applies migrations, and runs the API,
+document worker, and frontend:
 
 ```bash
 ./scripts/dev.sh
