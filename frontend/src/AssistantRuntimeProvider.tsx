@@ -41,9 +41,9 @@ const apiModel: ChatModelAdapter = {
     if (!threadId) {
       return { content: [{ type: 'text', text: 'Unable to identify this conversation. Please start a new chat.' }] }
     }
-    const activeDocument = documentState.documents.find((item) => item.id === documentState.activeDocumentId)
-    if (activeDocument && activeDocument.status !== 'ready') {
-      return { content: [{ type: 'text', text: `**${activeDocument.filename}** is still ${activeDocument.status}. Keep the worker running and wait until it is ready.` }] }
+    const readyDocuments = documentState.documents.filter((item) => item.status === 'ready')
+    if (readyDocuments.length === 0) {
+      return { content: [{ type: 'text', text: 'No project documents are ready yet. Keep the worker running and wait until processing finishes.' }] }
     }
 
     try {
@@ -53,7 +53,6 @@ const apiModel: ChatModelAdapter = {
         project_id: projectId,
         thread_id: threadId,
         question,
-        document_id: documentState.activeDocumentId || undefined,
         retrieval_limit: 5,
       }, abortSignal)
       if (promptMessageId) promptAuthorStore.set(promptMessageId, response.author)

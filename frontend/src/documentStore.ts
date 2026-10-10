@@ -5,7 +5,6 @@ import type { DocumentResponse } from './api/types'
 interface DocumentState {
   projectId: string | null
   documents: DocumentResponse[]
-  activeDocumentId: string | null
   loading: boolean
   error: string | null
 }
@@ -13,7 +12,6 @@ interface DocumentState {
 let state: DocumentState = {
   projectId: null,
   documents: [],
-  activeDocumentId: null,
   loading: false,
   error: null,
 }
@@ -36,28 +34,17 @@ export const documentStore = {
     return () => listeners.delete(listener)
   },
   async setProject(projectId: string) {
-    const activeDocumentId = window.localStorage.getItem(`intellect-active-document:${projectId}`)
-    update({ projectId, documents: [], activeDocumentId, error: null })
+    window.localStorage.removeItem(`intellect-active-document:${projectId}`)
+    update({ projectId, documents: [], error: null })
     await this.load()
-  },
-  select(documentId: string | null) {
-    if (!state.projectId) return
-    const key = `intellect-active-document:${state.projectId}`
-    if (documentId) window.localStorage.setItem(key, documentId)
-    else window.localStorage.removeItem(key)
-    update({ activeDocumentId: documentId })
   },
   async load() {
     if (!state.projectId) return
     update({ loading: true, error: null })
     try {
       const documents = await api.documents.list(state.projectId)
-      const activeExists = documents.some((item) => item.id === state.activeDocumentId)
-      const activeDocumentId = activeExists ? state.activeDocumentId : documents[0]?.id || null
-      if (activeDocumentId) window.localStorage.setItem(`intellect-active-document:${state.projectId}`, activeDocumentId)
       update({
         documents,
-        activeDocumentId,
         loading: false,
       })
     } catch (error) {
@@ -80,33 +67,22 @@ export const documentStore = {
     if (!state.projectId) throw new Error('Select a project before uploading documents.')
     update({ error: null })
     const document = await api.documents.upload(state.projectId, file)
-    window.localStorage.setItem(`intellect-active-document:${state.projectId}`, document.id)
     update({
       documents: [document, ...state.documents.filter((item) => item.id !== document.id)],
-      activeDocumentId: document.id,
     })
     return document
   },
   async remove(documentId: string) {
     if (!state.projectId) return
     const previousDocuments = state.documents
-    const previousActiveDocumentId = state.activeDocumentId
     const documents = state.documents.filter((item) => item.id !== documentId)
-    const activeDocumentId = state.activeDocumentId === documentId ? documents[0]?.id || null : state.activeDocumentId
     update({ error: null })
-    this.select(activeDocumentId)
-    update({ documents, activeDocumentId })
+    update({ documents })
     try {
       await api.documents.remove(state.projectId, documentId)
     } catch (error) {
-      if (state.projectId) {
-        const key = `intellect-active-document:${state.projectId}`
-        if (previousActiveDocumentId) window.localStorage.setItem(key, previousActiveDocumentId)
-        else window.localStorage.removeItem(key)
-      }
       update({
         documents: previousDocuments,
-        activeDocumentId: previousActiveDocumentId,
         error: messageFrom(error),
       })
     }
