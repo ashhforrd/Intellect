@@ -190,13 +190,24 @@ document management, chat, graphs, and insights.
 | `AnswerEvidence.tsx`, `MarkdownAnswer.tsx` | Source evidence and rendered answers |
 | `ChatGraph.tsx`, `chatGraphStore.ts` | React Flow graph display and browser graph cache |
 | `promptAuthorStore.ts`, `chatContext.ts` | Prompt authorship cache and active thread context |
+| `conversationParticipantStore.ts`, `components/UserAvatar.tsx` | Account/project/thread-scoped participant state and initial avatars |
 | `*.css` | Component/workspace styling and theme layers |
 
-Thread lists/history use the assistant-ui local storage adapter with a project
-prefix. Active project selection, graph cache, and prompt author cache also use
+Thread lists and history use the assistant-ui remote thread adapter backed by the
+conversation API. Conversation metadata includes distinct participants derived
+from the thread creator and persisted turn authors. The repository batches this
+lookup across the listed threads, filters both sources by project, and places
+the creator first. Routes check project membership before returning participants;
+the summary exposes user IDs and display names. No additional database columns
+are needed.
+
+The frontend keeps participant summaries in memory, scoped by account, project,
+and thread. Successful questions update those summaries immediately; metadata and
+history reads restore them after reload. Avatars use the first letter of each
+display name. Active project selection, graph cache, and prompt author cache use
 browser storage. The backend separately persists conversation turns and insights.
-Browser state is not a replacement for those database records, nor a complete
-server-backed shared thread synchronization mechanism.
+There is no push-based cross-browser synchronization; other sessions see changes
+when the relevant API data is fetched again.
 
 ## Configuration and local operation
 

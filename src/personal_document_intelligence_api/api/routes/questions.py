@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Annotated
 from uuid import UUID
 
@@ -18,6 +19,7 @@ from personal_document_intelligence_api.api.dependencies.rate_limit import (
     enforce_expensive_rate_limit,
 )
 from personal_document_intelligence_api.api.schemas.questions import (
+    ConversationParticipantResponse,
     ConversationThreadCreate,
     ConversationThreadResponse,
     ConversationThreadUpdate,
@@ -30,6 +32,9 @@ from personal_document_intelligence_api.api.schemas.questions import (
 from personal_document_intelligence_api.core.config import (
     Settings,
     get_settings,
+)
+from personal_document_intelligence_api.database.models.conversation_thread import (
+    ConversationThreadRecord,
 )
 from personal_document_intelligence_api.database.repositories.conversation_thread import (
     ConversationThreadRepository,
@@ -177,6 +182,25 @@ async def require_project_member(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
 
+async def thread_responses(
+    session: AsyncSession, project_id: UUID, threads: Sequence[ConversationThreadRecord]
+) -> list[ConversationThreadResponse]:
+    participants = await ConversationThreadRepository(session).participants_for_threads(
+        project_id, [thread.id for thread in threads]
+    )
+    return [
+        ConversationThreadResponse.model_validate(thread).model_copy(
+            update={
+                "participants": [
+                    ConversationParticipantResponse.model_validate(user)
+                    for user in participants.get(thread.id, [])
+                ]
+            }
+        )
+        for thread in threads
+    ]
+
+
 @router.get(
     "/conversations/{project_id}",
     response_model=list[ConversationThreadResponse],
@@ -188,7 +212,7 @@ async def list_conversations(
 ) -> list[ConversationThreadResponse]:
     await require_project_member(session, project_id, owner_id)
     threads = await ConversationThreadRepository(session).list_for_project(project_id)
-    return [ConversationThreadResponse.model_validate(thread) for thread in threads]
+    return await thread_responses(session, project_id, threads)
 
 
 @router.post(
@@ -209,7 +233,7 @@ async def create_conversation(
     repository = ConversationThreadRepository(session)
     existing = await repository.get(project_id, request.id)
     if existing is not None:
-        return ConversationThreadResponse.model_validate(existing)
+        return (await thread_responses(session, project_id, [existing]))[0]
     thread = await repository.create(
         project_id=project_id,
         thread_id=request.id,
@@ -217,7 +241,7 @@ async def create_conversation(
         title=request.title,
     )
     await session.commit()
-    return ConversationThreadResponse.model_validate(thread)
+    return (await thread_responses(session, project_id, [thread]))[0]
 
 
 @router.get(
@@ -234,7 +258,7 @@ async def get_conversation(
     thread = await ConversationThreadRepository(session).get(project_id, thread_id)
     if thread is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
-    return ConversationThreadResponse.model_validate(thread)
+    return (await thread_responses(session, project_id, [thread]))[0]
 
 
 @router.patch(
@@ -259,7 +283,7 @@ async def update_conversation(
         is_archived=request.is_archived,
     )
     await session.commit()
-    return ConversationThreadResponse.model_validate(thread)
+    return (await thread_responses(session, project_id, [thread]))[0]
 
 
 @router.delete(

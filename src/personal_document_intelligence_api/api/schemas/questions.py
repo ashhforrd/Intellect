@@ -52,6 +52,13 @@ class ConversationThreadUpdate(BaseModel):
     is_archived: bool | None = None
 
 
+class ConversationParticipantResponse(BaseModel):
+    id: UUID
+    display_name: str
+
+    model_config = {"from_attributes": True}
+
+
 class ConversationThreadResponse(BaseModel):
     id: str
     project_id: UUID
@@ -60,5 +67,6 @@ class ConversationThreadResponse(BaseModel):
     is_archived: bool
     created_at: datetime
     updated_at: datetime
+    participants: list[ConversationParticipantResponse] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}

@@ -17,6 +17,8 @@ import { projectStore } from './projectStore'
 import { chatContext } from './chatContext'
 import { authStore } from './authStore'
 import { promptAuthorStore } from './promptAuthorStore'
+import { conversationParticipantStore } from './conversationParticipantStore'
+import type { ConversationThreadRecord } from './api/types'
 
 async function* streamResponse(text: string, sources: unknown[] = [], abortSignal?: AbortSignal) {
   const units = text.match(/\S+\s*/g) ?? [text]
@@ -47,6 +49,8 @@ const apiModel: ChatModelAdapter = {
       .map((part) => part.text)
       .join(' ')
     const promptMessageId = messages.at(-1)?.id
+    const currentUser = authStore.getSnapshot().user
+    if (promptMessageId && currentUser) promptAuthorStore.set(promptMessageId, currentUser)
 
     if (!question?.trim()) {
       yield* streamResponse('Please enter a question about your documents.', [], abortSignal)
@@ -71,8 +75,6 @@ const apiModel: ChatModelAdapter = {
     }
 
     try {
-      const currentUser = authStore.getSnapshot().user
-      if (promptMessageId && currentUser) promptAuthorStore.set(promptMessageId, currentUser)
       const response = await api.questions.ask({
         project_id: projectId,
         thread_id: threadId,
@@ -80,6 +82,7 @@ const apiModel: ChatModelAdapter = {
         retrieval_limit: 8,
       }, abortSignal)
       if (promptMessageId) promptAuthorStore.set(promptMessageId, response.author)
+      if (currentUser) conversationParticipantStore.add(currentUser.id, projectId, threadId, response.author)
 
       yield* streamResponse(response.answer, response.sources, abortSignal)
     } catch (error) {
@@ -104,9 +107,14 @@ function useApiThreadRuntime() {
 }
 
 function createProjectThreadListAdapter(projectId: string): RemoteThreadListAdapter {
+  const accountId = authStore.getSnapshot().user?.id
+  function rememberParticipants(thread: ConversationThreadRecord) {
+    if (accountId) conversationParticipantStore.set(accountId, projectId, thread.id, thread.participants)
+  }
   return {
     async list() {
       const threads = await api.questions.conversations.list(projectId)
+      threads.forEach(rememberParticipants)
       return {
         threads: threads.map((thread) => ({
           status: thread.is_archived ? 'archived' as const : 'regular' as const,
@@ -118,10 +126,12 @@ function createProjectThreadListAdapter(projectId: string): RemoteThreadListAdap
     },
     async initialize(threadId) {
       const thread = await api.questions.conversations.create(projectId, threadId)
+      rememberParticipants(thread)
       return { remoteId: thread.id }
     },
     async fetch(threadId) {
       const thread = await api.questions.conversations.get(projectId, threadId)
+      rememberParticipants(thread)
       return {
         status: thread.is_archived ? 'archived' as const : 'regular' as const,
         remoteId: thread.id,
@@ -140,6 +150,7 @@ function createProjectThreadListAdapter(projectId: string): RemoteThreadListAdap
     },
     async delete(threadId) {
       await api.questions.conversations.remove(projectId, threadId)
+      if (accountId) conversationParticipantStore.remove(accountId, projectId, threadId)
     },
     async generateTitle(threadId, messages) {
       const title = conversationTitle(messages)
@@ -151,17 +162,20 @@ function createProjectThreadListAdapter(projectId: string): RemoteThreadListAdap
         (state) => state.threadListItem.remoteId || state.threadListItem.id,
       )
       return useMemo(
-        () => threadId ? { history: createConversationHistory(projectId, threadId) } : null,
+        () => threadId ? { history: createConversationHistory(projectId, threadId, accountId) } : null,
         [threadId],
       )
     },
   }
 }
 
-function createConversationHistory(projectId: string, threadId: string): ThreadHistoryAdapter {
+function createConversationHistory(projectId: string, threadId: string, accountId?: string): ThreadHistoryAdapter {
   return {
     async load() {
       const turns = await api.questions.conversation(projectId, threadId)
+      if (accountId) {
+        turns.forEach(turn => conversationParticipantStore.add(accountId, projectId, threadId, turn.author))
+      }
       const messages: ThreadMessageLike[] = turns.flatMap((turn) => {
         const createdAt = new Date(turn.created_at)
         const userMessageId = `${turn.id}:user`

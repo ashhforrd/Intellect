@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import case, delete, select, union
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from personal_document_intelligence_api.database.models.conversation_thread import (
@@ -11,6 +11,7 @@ from personal_document_intelligence_api.database.models.conversation_thread impo
 from personal_document_intelligence_api.database.models.conversation_turn import (
     ConversationTurnRecord,
 )
+from personal_document_intelligence_api.database.models.user import User
 
 
 class ConversationThreadRepository:
@@ -49,6 +50,47 @@ class ConversationThreadRepository:
             .limit(limit)
         )
         return result.scalars().all()
+
+    async def participants_for_threads(
+        self, project_id: UUID, thread_ids: Sequence[str]
+    ) -> dict[str, list[User]]:
+        if not thread_ids:
+            return {}
+        participants = union(
+            select(
+                ConversationThreadRecord.id.label("thread_id"),
+                ConversationThreadRecord.created_by.label("user_id"),
+            ).where(
+                ConversationThreadRecord.project_id == project_id,
+                ConversationThreadRecord.id.in_(thread_ids),
+            ),
+            select(
+                ConversationTurnRecord.thread_id,
+                ConversationTurnRecord.author_id,
+            ).where(
+                ConversationTurnRecord.project_id == project_id,
+                ConversationTurnRecord.thread_id.in_(thread_ids),
+            ),
+        ).subquery()
+        result = await self.session.execute(
+            select(participants.c.thread_id, User)
+            .join(User, User.id == participants.c.user_id)
+            .join(
+                ConversationThreadRecord,
+                (ConversationThreadRecord.id == participants.c.thread_id)
+                & (ConversationThreadRecord.project_id == project_id),
+            )
+            .order_by(
+                participants.c.thread_id,
+                case((User.id == ConversationThreadRecord.created_by, 0), else_=1),
+                User.display_name,
+                User.id,
+            )
+        )
+        grouped: dict[str, list[User]] = {}
+        for thread_id, user in result.all():
+            grouped.setdefault(thread_id, []).append(user)
+        return grouped
 
     async def update(
         self,

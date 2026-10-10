@@ -1,4 +1,6 @@
 import { InsightCard, InsightBadge } from './components/InsightCard'
+import { ContributorAvatars, UserAvatar } from './components/UserAvatar'
+import { useConversationParticipants } from './conversationParticipantStore'
 import { DocumentRow } from './components/DocumentRow'
 import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogActions, DialogCancel, DialogAction } from './components/Dialog'
@@ -103,7 +105,7 @@ function Sidebar({ page, onNavigate, onClose }: {
         </IconButton>
       </div>
     </div>
-    <label className="mx-2 mt-5.5 mb-1.75 block text-2xs font-bold tracking-eyebrow text-neutral-500">Project</label>
+    <label className="text-display mx-2 mt-5.5 mb-1.75 block">Project</label>
     <select
       value={activeProjectId || ''}
       onChange={(event) => projectStore.select(event.target.value)}
@@ -125,7 +127,7 @@ function Sidebar({ page, onNavigate, onClose }: {
       ><Plus size={16} />New chat</button>
       <div className="mt-7">
         <div className="mx-2.5 mb-2 flex items-center justify-between">
-          <p className="m-0 text-xs font-bold tracking-label text-neutral-400">Conversations</p>
+          <p className="text-display m-0">Conversations</p>
           <button onClick={() => setSearchOpen(!searchOpen)} className="border-0 bg-transparent p-0 text-2xs text-neutral-500 hover:text-neutral-200">Search</button>
         </div>
         {searchOpen && <div className="mt-4 flex h-10.5 items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-900 px-2.5">
@@ -315,12 +317,14 @@ function ThreadListItem({ projectId }: {
   const aui = useAui()
   const threadId = useAuiState((state) => state.threadListItem.remoteId || state.threadListItem.id)
   const title = useAuiState((state) => state.threadListItem.title) || 'this conversation'
+  const participants = useConversationParticipants(projectId, threadId)
   const [confirmOpen, setConfirmOpen] = useState(false)
   return <ThreadListItemPrimitive.Root className="group/thread relative">
     <ThreadListItemPrimitive.Trigger
-      className="h-10.5 w-full overflow-hidden rounded-lg border-0 bg-transparent py-0 pr-10.5 pl-3 text-left text-sm text-ellipsis whitespace-nowrap text-neutral-400 hover:bg-neutral-900 hover:text-white group-data-[active=true]/thread:bg-neutral-900 group-data-[active=true]/thread:text-white"
+      className="flex h-10.5 w-full items-center gap-2 overflow-hidden rounded-lg border-0 bg-transparent py-0 pr-10.5 pl-3 text-left text-xs whitespace-nowrap text-neutral-400 hover:bg-neutral-900 hover:text-white group-data-[active=true]/thread:bg-neutral-900 group-data-[active=true]/thread:text-white"
     >
-      <ThreadListItemPrimitive.Title fallback="New conversation" />
+      <span className="min-w-0 flex-1 truncate"><ThreadListItemPrimitive.Title fallback="New conversation" /></span>
+      <ContributorAvatars participants={participants} />
     </ThreadListItemPrimitive.Trigger>
     <button
       type="button"
@@ -427,7 +431,8 @@ function UserMessage() {
   const author = usePromptAuthor(messageId)
   return <MessagePrimitive.Root className="mx-auto flex w-full max-w-230 gap-3.5 py-3.75 text-base leading-copy mobile:text-sm justify-end">
     <div className="flex max-w-3/4 flex-col items-end gap-1.5">
-      <span className="mx-1 mt-0 mb-1.5 block text-right text-2xs text-neutral-500">
+      <span className="mx-1 mt-0 mb-1.5 inline-flex items-center gap-1.5 text-right text-2xs text-neutral-500">
+        <UserAvatar name={author?.display_name || 'Team member'} size="tiny" />
         {author?.display_name || 'Team member'}
       </span>
       <div className="max-w-full rounded-user-message bg-neutral-700 px-3.75 py-2.75 text-white message-content">

@@ -77,6 +77,11 @@
 
 /* Layered page surfaces. */
 @layer components {
+  .text-display {
+    @apply font-bold tracking-label text-neutral-500 uppercase;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
 .graph-surface {
   background-image: radial-gradient(circle at 50% 42%, var(--color-neutral-800) 0, var(--color-neutral-900) 24%, transparent 52%), linear-gradient(var(--color-neutral-800) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-800) 1px, transparent 1px);
   background-size: auto, --spacing(8) --spacing(8), --spacing(8) --spacing(8);

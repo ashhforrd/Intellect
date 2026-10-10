@@ -64,6 +64,11 @@ export interface ConversationTurnRecord {
   author: Omit<AuthUser, 'member_id'>
 }
 
+export interface ConversationParticipant {
+  id: string
+  display_name: string
+}
+
 export interface ConversationThreadRecord {
   id: string
   project_id: string
@@ -72,6 +77,7 @@ export interface ConversationThreadRecord {
   is_archived: boolean
   created_at: string
   updated_at: string
+  participants: ConversationParticipant[]
 }
 
 export interface RagEvidence {
