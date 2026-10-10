@@ -356,19 +356,6 @@ If the script reports an incomplete environment setting, update that key in
 Press `Ctrl+C` to stop the API, worker, and frontend. PostgreSQL remains
 available in Docker so subsequent starts do not need to recreate the database.
 
-### Demo accounts
-
-The development migration seeds three members into the shared workspace:
-
-| Name | Email |
-| --- | --- |
-| Lucas | `lucas@intellect.id` |
-| Kezia | `kezia@intellect.id` |
-| Atqiya Haydar | `atqiya@intellect.id` |
-
-All three demo accounts use the password `IntellectDemo!2026`. These credentials
-are development fixtures only and must be replaced before a public deployment.
-
 ## Docker
 
 Build the backend image:
