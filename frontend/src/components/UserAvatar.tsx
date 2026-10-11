@@ -10,10 +10,10 @@ export function UserAvatar({ name, size = 'small', tooltip = name }: { name: str
 }
 
 export function ContributorAvatars({ participants }: { participants: readonly ConversationParticipant[] }) {
-  if (participants.length < 2) return null
+  if (participants.length === 0) return null
   const visible = participants.slice(0, 3)
   const remaining = participants.length - visible.length
-  const label = `Shared conversation: ${participants.map(user => user.display_name).join(', ')}`
+  const label = `Conversation contributors: ${participants.map(user => user.display_name).join(', ')}`
   const tooltip = participants.map(user => user.display_name).join('\n')
   return (
     <span role="img" aria-label={label} title={tooltip} className="flex shrink-0 items-center -space-x-1.5">
