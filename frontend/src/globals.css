@@ -77,6 +77,50 @@
 
 /* Layered page surfaces. */
 @layer components {
+  .model-effort-slider {
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 1rem;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .model-effort-slider::-webkit-slider-runnable-track {
+    height: .25rem;
+    border-radius: 999px;
+    background: var(--effort-track);
+  }
+  .model-effort-slider::-moz-range-track {
+    height: .25rem;
+    border-radius: 999px;
+    background: var(--effort-track);
+  }
+  .model-effort-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: .875rem;
+    height: .875rem;
+    margin-top: -.3125rem;
+    border: 2px solid var(--color-neutral-900);
+    border-radius: 50%;
+    background: var(--color-neutral-100);
+    box-shadow: 0 0 0 1px var(--color-neutral-600);
+  }
+  .model-effort-slider::-moz-range-thumb {
+    box-sizing: border-box;
+    width: .875rem;
+    height: .875rem;
+    border: 2px solid var(--color-neutral-900);
+    border-radius: 50%;
+    background: var(--color-neutral-100);
+    box-shadow: 0 0 0 1px var(--color-neutral-600);
+  }
+  .model-effort-slider:focus-visible {
+    outline: 2px solid var(--color-neutral-400);
+    outline-offset: 3px;
+    border-radius: 999px;
+  }
+  .model-effort-slider:disabled { cursor: default; opacity: .5; }
   .text-display {
     @apply font-bold tracking-label text-neutral-500 uppercase;
     font-size: 10pt;

@@ -14,6 +14,7 @@ import type {
   ConversationThreadRecord,
   QuestionRequest,
   QuestionResponse,
+  AnswerModelsResponse,
   SemanticSearchRequest,
   SemanticSearchResult,
 } from './types'
@@ -117,6 +118,7 @@ export const api = {
   },
 
   questions: {
+    models: (signal?: AbortSignal) => request<AnswerModelsResponse>('/questions/models', { signal }),
     ask: (payload: QuestionRequest, signal?: AbortSignal) =>
       request<QuestionResponse>('/questions', {
         method: 'POST',

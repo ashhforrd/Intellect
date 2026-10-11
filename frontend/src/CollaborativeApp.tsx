@@ -21,6 +21,7 @@ import { documentStore, useDocuments } from './documentStore'
 import { projectStore, useProjects } from './projectStore'
 import { authStore, useAuth } from './authStore'
 import { usePromptAuthor } from './promptAuthorStore'
+import { ModelPicker } from './components/ModelPicker'
 type Page = 'chat' | 'documents'
 export default function CollaborativeApp() {
   const { activeProjectId, loading, error } = useProjects()
@@ -461,22 +462,25 @@ function Composer({ projectId }: {
       rows={1}
       className="max-h-40 min-h-14.5 w-full resize-none border-0 bg-transparent p-0.5 text-sm leading-body text-neutral-100 outline-none placeholder:font-mono placeholder:[font-size:inherit] placeholder:font-normal placeholder:tracking-normal placeholder:text-neutral-500"
     />
-    <div className="mt-1.5 flex items-center justify-end gap-1.75">
-      <span className="flex items-center gap-1.5 text-xs text-neutral-500"><Files size={14} />Project sources</span>
-      <AuiIf condition={(state) => !state.thread.isRunning}>
-        <ComposerPrimitive.Send
-          className="ml-auto grid size-9 place-items-center rounded-lg border-0 bg-white text-neutral-900 disabled:cursor-default disabled:bg-neutral-800 disabled:text-neutral-600"
-        >
-          <ArrowUp size={17} />
-        </ComposerPrimitive.Send>
-      </AuiIf>
-      <AuiIf condition={(state) => state.thread.isRunning}>
-        <ComposerPrimitive.Cancel
-          className="ml-auto grid size-9 place-items-center rounded-lg border-0 bg-white text-neutral-900 disabled:cursor-default disabled:bg-neutral-800 disabled:text-neutral-600"
-        >
-          <Square size={12} />
-        </ComposerPrimitive.Cancel>
-      </AuiIf>
+    <div className="mt-1.5 flex items-center gap-1.75">
+      <span className="flex items-center gap-1.5 text-xs text-neutral-500 mobile:hidden"><Files size={14} />Project sources</span>
+      <div className="ml-auto flex min-w-0 items-center gap-1.75">
+        <ModelPicker projectId={projectId} />
+        <AuiIf condition={(state) => !state.thread.isRunning}>
+          <ComposerPrimitive.Send
+            className="grid size-9 shrink-0 place-items-center rounded-lg border-0 bg-white text-neutral-900 disabled:cursor-default disabled:bg-neutral-800 disabled:text-neutral-600"
+          >
+            <ArrowUp size={17} />
+          </ComposerPrimitive.Send>
+        </AuiIf>
+        <AuiIf condition={(state) => state.thread.isRunning}>
+          <ComposerPrimitive.Cancel
+            className="grid size-9 shrink-0 place-items-center rounded-lg border-0 bg-white text-neutral-900 disabled:cursor-default disabled:bg-neutral-800 disabled:text-neutral-600"
+          >
+            <Square size={12} />
+          </ComposerPrimitive.Cancel>
+        </AuiIf>
+      </div>
     </div>
   </ComposerPrimitive.Root>
 }

@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from personal_document_intelligence_api.rag.generation.options import ReasoningEffort
+
 
 class QuestionRequest(BaseModel):
     project_id: UUID
@@ -10,6 +12,21 @@ class QuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     document_id: UUID | None = None
     retrieval_limit: int = Field(default=5, ge=1, le=20)
+    model: str | None = Field(default=None, min_length=1, max_length=100)
+    reasoning_effort: ReasoningEffort | None = None
+
+
+class AnswerModelResponse(BaseModel):
+    id: str
+    label: str
+    reasoning_efforts: list[ReasoningEffort]
+    default_effort: ReasoningEffort
+
+
+class AnswerModelsResponse(BaseModel):
+    models: list[AnswerModelResponse]
+    default_model: str
+    default_effort: ReasoningEffort
 
 
 class QuestionSourceResponse(BaseModel):

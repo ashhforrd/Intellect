@@ -2,8 +2,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from personal_document_intelligence_api.rag.generation.options import (
+    GENERATION_MODELS,
+    ReasoningEffort,
+    resolve_generation_options,
+)
 
 
 class Settings(BaseSettings):
@@ -25,7 +31,9 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
     generation_model: str = "gpt-6-luna"
-    generation_max_output_tokens: int = 2400
+    generation_allowed_models: list[str] = Field(default_factory=lambda: list(GENERATION_MODELS))
+    generation_reasoning_effort: ReasoningEffort = "medium"
+    generation_max_output_tokens: int = Field(default=16000, ge=1, le=128000)
     rag_minimum_score: float = 0.25
     knowledge_graph_model: str = "gpt-6-luna"
     knowledge_graph_max_concepts: int = 20
@@ -45,6 +53,19 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def validate_generation_settings(self) -> "Settings":
+        if any(model not in GENERATION_MODELS for model in self.generation_allowed_models):
+            raise ValueError("GENERATION_ALLOWED_MODELS contains an unsupported model")
+        resolve_generation_options(
+            model=None,
+            reasoning_effort=None,
+            allowed_models=self.generation_allowed_models,
+            default_model=self.generation_model,
+            default_effort=self.generation_reasoning_effort,
+        )
+        return self
 
 
 @lru_cache

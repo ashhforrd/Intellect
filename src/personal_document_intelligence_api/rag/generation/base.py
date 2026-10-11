@@ -5,8 +5,14 @@ from personal_document_intelligence_api.retrieval.models import (
     SemanticSearchResult,
 )
 
+from .options import GenerationOptions
+
 
 class AnswerGenerationError(Exception):
+    pass
+
+
+class AnswerGenerationIncompleteError(AnswerGenerationError):
     pass
 
 
@@ -15,4 +21,6 @@ class AnswerGenerator(Protocol):
         self,
         question: str,
         contexts: Sequence[SemanticSearchResult],
+        *,
+        options: GenerationOptions | None = None,
     ) -> str: ...

@@ -19,6 +19,8 @@ from personal_document_intelligence_api.api.dependencies.rate_limit import (
     enforce_expensive_rate_limit,
 )
 from personal_document_intelligence_api.api.schemas.questions import (
+    AnswerModelResponse,
+    AnswerModelsResponse,
     ConversationParticipantResponse,
     ConversationThreadCreate,
     ConversationThreadResponse,
@@ -52,7 +54,12 @@ from personal_document_intelligence_api.database.session import (
 )
 from personal_document_intelligence_api.rag.generation.base import (
     AnswerGenerationError,
+    AnswerGenerationIncompleteError,
     AnswerGenerator,
+)
+from personal_document_intelligence_api.rag.generation.options import (
+    GENERATION_MODELS,
+    resolve_generation_options,
 )
 from personal_document_intelligence_api.rag.service import RagService
 from personal_document_intelligence_api.retrieval.embeddings.base import (
@@ -65,6 +72,27 @@ from personal_document_intelligence_api.retrieval.search_service import (
 )
 
 router = APIRouter(prefix="/questions", tags=["questions"])
+
+
+@router.get("/models", response_model=AnswerModelsResponse)
+def list_answer_models(
+    owner_id: Annotated[str, Depends(get_current_owner_id)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AnswerModelsResponse:
+    return AnswerModelsResponse(
+        models=[
+            AnswerModelResponse(
+                id=spec.id,
+                label=spec.label,
+                reasoning_efforts=list(spec.reasoning_efforts),
+                default_effort=spec.default_effort,
+            )
+            for model_id in dict.fromkeys(settings.generation_allowed_models)
+            for spec in [GENERATION_MODELS[model_id]]
+        ],
+        default_model=settings.generation_model,
+        default_effort=settings.generation_reasoning_effort,
+    )
 
 
 @router.post(
@@ -104,6 +132,19 @@ async def ask_question(
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
+    try:
+        generation_options = resolve_generation_options(
+            model=request.model,
+            reasoning_effort=request.reasoning_effort,
+            allowed_models=settings.generation_allowed_models,
+            default_model=settings.generation_model,
+            default_effort=settings.generation_reasoning_effort,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
+        ) from error
+
     search_service = SemanticSearchService(
         repository=DocumentChunkRepository(session),
         embedding_provider=embedding_provider,
@@ -121,11 +162,20 @@ async def ask_question(
             project_id=request.project_id,
             document_id=request.document_id,
             retrieval_limit=request.retrieval_limit,
+            generation_options=generation_options,
         )
     except EmptySearchQueryError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
+        ) from error
+    except AnswerGenerationIncompleteError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "The answer could not be completed. "
+                "Try a lower reasoning effort or a narrower question."
+            ),
         ) from error
     except (EmbeddingProviderError, AnswerGenerationError) as error:
         raise HTTPException(

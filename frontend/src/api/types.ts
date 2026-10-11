@@ -31,6 +31,23 @@ export interface QuestionRequest {
   question: string
   document_id?: string
   retrieval_limit?: number
+  model?: string
+  reasoning_effort?: ReasoningEffort
+}
+
+export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+
+export interface AnswerModel {
+  id: string
+  label: string
+  reasoning_efforts: ReasoningEffort[]
+  default_effort: ReasoningEffort
+}
+
+export interface AnswerModelsResponse {
+  models: AnswerModel[]
+  default_model: string
+  default_effort: ReasoningEffort
 }
 
 export interface QuestionSource {

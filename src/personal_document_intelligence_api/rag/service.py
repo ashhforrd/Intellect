@@ -4,6 +4,7 @@ from uuid import UUID
 from personal_document_intelligence_api.rag.generation.base import (
     AnswerGenerator,
 )
+from personal_document_intelligence_api.rag.generation.options import GenerationOptions
 from personal_document_intelligence_api.rag.models import RagAnswer
 from personal_document_intelligence_api.retrieval.search_service import (
     SemanticSearchService,
@@ -29,6 +30,7 @@ class RagService:
         project_id: UUID,
         document_id: UUID | None = None,
         retrieval_limit: int = 5,
+        generation_options: GenerationOptions | None = None,
     ) -> RagAnswer:
         retrieved_sources = await self.search_service.search(
             query=question,
@@ -50,6 +52,7 @@ class RagService:
             self.answer_generator.generate,
             question,
             sources,
+            **({"options": generation_options} if generation_options else {}),
         )
 
         return RagAnswer(

@@ -137,6 +137,35 @@ the current RAG service takes the current question and retrieved sources, rather
 than the full previous conversation. The frontend animates the completed JSON
 answer progressively; the API response is not a token stream.
 
+The composer exposes an OpenAI answer model and reasoning effort picker.
+Authenticated `GET /questions/models` supplies the configured allowlist and each
+model's supported efforts. `POST /questions` accepts optional `model` and
+`reasoning_effort`; omitted selections use server defaults. After project access
+is checked, the route rejects disabled models and unsupported effort combinations
+with HTTP 422. Immutable per-request options pass through `RagService` to the
+Responses API as `model` and `reasoning.effort`, without mutating the cached
+generator. Embedding and knowledge graph models retain independent settings.
+The model capability catalog is maintained in `rag/generation/options.py` against
+the official OpenAI pages for [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna),
+[GPT-6 Sol](https://developers.openai.com/api/docs/models/gpt-6-sol), and
+[GPT-6 Astra](https://developers.openai.com/api/docs/models/gpt-6-astra). The
+allowlist is deployment configuration, not a live account-access check; operators
+should expose only models enabled for their OpenAI project.
+The weak-evidence fallback still skips answer generation. Incomplete model
+responses return HTTP 503 with a suggestion to lower effort or narrow the question,
+and are not persisted as successful answers.
+
+Picker preferences are stored in browser storage under account/project keys,
+revalidated against the catalog on load, and reset to valid defaults when needed.
+Changing models preserves the chosen effort when supported. Controls are disabled
+while an answer is running. A custom popup trigger sits immediately left of Send;
+its model choices precede a divided reasoning-effort section with a discrete
+slider containing only the selected model's supported efforts. The popup is
+rendered in a portal above the composer, with keyboard navigation, Escape and
+outside-click dismissal. If catalog loading fails, the composer offers a retry
+and visibly falls back to server defaults. Conversation records continue to store
+question/answer content; they do not store per-turn model or effort metadata.
+
 **Document graphs.** `KnowledgeGraphService` reads authorized processed chunks,
 calls the graph extractor, validates the output through the extraction path, and
 persists the document graph, concepts, and relations. Read and generation routes
@@ -186,6 +215,7 @@ document management, chat, graphs, and insights.
 | `api/config.ts`, `api/client.ts`, `api/types.ts` | API base URL, HTTP requests/error handling, shared frontend contracts |
 | `authStore.ts`, `projectStore.ts`, `documentStore.ts` | Session, active project, document state and refresh operations |
 | `AssistantRuntimeProvider.tsx` | assistant-ui model adapter, project-scoped thread storage, response animation |
+| `modelSelectionStore.ts`, `components/ModelPicker.tsx` | Account/project picker preferences and server-backed model/effort controls |
 | `DocumentAttachmentAdapter.ts` | Document attachment integration |
 | `AnswerEvidence.tsx`, `MarkdownAnswer.tsx` | Source evidence and rendered answers |
 | `ChatGraph.tsx`, `chatGraphStore.ts` | React Flow graph display and browser graph cache |
@@ -221,6 +251,8 @@ settings instance. Consult `.env.example` for the setup template.
 | `STORAGE_BACKEND`, `LOCAL_STORAGE_PATH`, `S3_BUCKET_NAME` | Original document storage selection/location |
 | `AWS_REGION`, `SQS_QUEUE_URL` | AWS region and required processing queue |
 | `OPENAI_API_KEY`, embedding/generation/knowledge graph settings | Provider credentials, models, dimensions, output limits |
+| `GENERATION_ALLOWED_MODELS`, `GENERATION_MODEL`, `GENERATION_REASONING_EFFORT` | JSON allowlist of supported answer models and the default model/effort |
+| `GENERATION_MAX_OUTPUT_TOKENS` | Answer generation budget including reasoning tokens; default 16000, existing environment overrides still apply |
 | `RAG_MINIMUM_SCORE` | Evidence relevance threshold |
 | `APP_ENV`, `ANONYMOUS_SESSION_SECRET`, cookie settings | Session signing and cookie behavior |
 | `EXPENSIVE_RATE_LIMIT_*`, `CORS_ORIGINS` | Request limits and allowed browser origins |
@@ -258,7 +290,9 @@ Backend tests cover parsing/OCR services, document processing/lifecycle,
 retrieval/RAG, graph extraction/validation, insights, storage, queues, and request
 behavior such as CORS and rate limits. Run `uv run pytest` for the backend suite;
 Ruff configuration lives in `pyproject.toml`. Frontend checks are `npm run lint`
-and `npm run build` from `frontend/`; `package.json` has no frontend test script.
+and `npm run build` from `frontend/`. `npm test` checks picker preference
+restoration, account/project isolation, effort compatibility, and catalog failures
+without a DOM or live model requests.
 
 The retrieval evaluation runner uses `evals/retrieval_cases.json`, real processed
 project documents, a member owner ID, and embedding calls. Generation evaluation

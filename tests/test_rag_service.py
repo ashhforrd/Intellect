@@ -6,6 +6,7 @@ import pytest
 from personal_document_intelligence_api.rag.generation.base import (
     AnswerGenerator,
 )
+from personal_document_intelligence_api.rag.generation.options import GenerationOptions
 from personal_document_intelligence_api.rag.service import RagService
 from personal_document_intelligence_api.retrieval.models import (
     SemanticSearchResult,
@@ -16,7 +17,10 @@ from personal_document_intelligence_api.retrieval.search_service import (
 
 
 @pytest.mark.asyncio
-async def test_rag_retrieves_sources_and_generates_answer() -> None:
+@pytest.mark.parametrize("options", [None, GenerationOptions("gpt-6-astra", "high")])
+async def test_rag_retrieves_sources_and_generates_answer(
+    options: GenerationOptions | None,
+) -> None:
     search_service = AsyncMock(spec=SemanticSearchService)
     answer_generator = Mock(spec=AnswerGenerator)
     source = SemanticSearchResult(
@@ -42,6 +46,7 @@ async def test_rag_retrieves_sources_and_generates_answer() -> None:
         question="What is dynamic programming?",
         owner_id="user-123",
         project_id=uuid4(),
+        generation_options=options,
     )
 
     assert result.sources == (source,)
@@ -49,6 +54,7 @@ async def test_rag_retrieves_sources_and_generates_answer() -> None:
     answer_generator.generate.assert_called_once_with(
         "What is dynamic programming?",
         [source],
+        **({"options": options} if options else {}),
     )
 
 
@@ -68,6 +74,7 @@ async def test_rag_skips_generation_when_no_sources_found() -> None:
         question="Unknown topic",
         owner_id="user-123",
         project_id=uuid4(),
+        generation_options=GenerationOptions("gpt-6-astra", "max"),
     )
 
     assert result.sources == ()

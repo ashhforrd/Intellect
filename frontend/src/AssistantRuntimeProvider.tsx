@@ -18,6 +18,7 @@ import { chatContext } from './chatContext'
 import { authStore } from './authStore'
 import { promptAuthorStore } from './promptAuthorStore'
 import { conversationParticipantStore } from './conversationParticipantStore'
+import { modelSelectionStore } from './modelSelectionStore'
 import type { ConversationThreadRecord } from './api/types'
 
 async function* streamResponse(text: string, sources: unknown[] = [], abortSignal?: AbortSignal) {
@@ -75,11 +76,14 @@ const apiModel: ChatModelAdapter = {
     }
 
     try {
+      const selection = currentUser
+        ? modelSelectionStore.getSnapshot(currentUser.id, projectId).selection : null
       const response = await api.questions.ask({
         project_id: projectId,
         thread_id: threadId,
         question,
         retrieval_limit: 8,
+        ...selection,
       }, abortSignal)
       if (promptMessageId) promptAuthorStore.set(promptMessageId, response.author)
       if (currentUser) conversationParticipantStore.add(currentUser.id, projectId, threadId, response.author)

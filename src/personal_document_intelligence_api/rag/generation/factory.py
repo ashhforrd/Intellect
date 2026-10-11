@@ -22,4 +22,5 @@ def create_answer_generator(
         client=client,
         model=settings.generation_model,
         max_output_tokens=settings.generation_max_output_tokens,
+        reasoning_effort=settings.generation_reasoning_effort,
     )
