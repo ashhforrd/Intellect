@@ -1,9 +1,10 @@
-import { useEffect, useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import {
   AssistantRuntimeProvider as RuntimeProvider,
   ExportedMessageRepository,
   useLocalRuntime,
   useRemoteThreadListRuntime,
+  useAui,
   useAuiState,
   type ChatModelAdapter,
   type RemoteThreadListAdapter,
@@ -103,7 +104,11 @@ export function AssistantRuntimeProvider({ children, projectId }: { children: Re
     adapter: threadList,
     runtimeHook: useApiThreadRuntime,
   })
-  return <RuntimeProvider runtime={runtime}><ThreadContextSync />{children}</RuntimeProvider>
+  return <RuntimeProvider runtime={runtime}>
+    <ThreadContextSync />
+    <ConversationPoller projectId={projectId} />
+    {children}
+  </RuntimeProvider>
 }
 
 function useApiThreadRuntime() {
@@ -233,5 +238,86 @@ function ThreadContextSync() {
     chatContext.setThreadId(threadId || null)
     return () => chatContext.setThreadId(null)
   }, [threadId])
+  return null
+}
+
+const CONVERSATION_POLL_INTERVAL_MS = 5_000
+
+function ConversationPoller({ projectId }: { projectId: string }) {
+  const aui = useAui()
+  const activeThreadId = useAuiState(
+    (state) => state.threadListItem.remoteId || state.threadListItem.id,
+  )
+  const isRunning = useAuiState((state) => state.thread.isRunning)
+  const draft = useAuiState((state) => state.composer.text)
+  const threadVersions = useRef(new Map<string, string>())
+  const polling = useRef(false)
+  const mounted = useRef(false)
+  const activeThreadIdRef = useRef(activeThreadId)
+  const isRunningRef = useRef(isRunning)
+  const draftRef = useRef(draft)
+
+  useEffect(() => { activeThreadIdRef.current = activeThreadId }, [activeThreadId])
+  useEffect(() => { isRunningRef.current = isRunning }, [isRunning])
+  useEffect(() => { draftRef.current = draft }, [draft])
+
+  useEffect(() => {
+    threadVersions.current.clear()
+    mounted.current = false
+
+    async function poll() {
+      if (document.visibilityState === 'hidden' || polling.current) return
+      polling.current = true
+
+      try {
+        const conversations = await api.questions.conversations.list(projectId)
+        const nextVersions = new Map(
+          conversations.map((conversation) => [conversation.id, conversation.updated_at]),
+        )
+        const listChanged = mounted.current && (
+          nextVersions.size !== threadVersions.current.size
+          || conversations.some(
+            (conversation) => threadVersions.current.get(conversation.id) !== conversation.updated_at,
+          )
+        )
+        const currentThreadId = activeThreadIdRef.current
+        const activeThreadChanged = Boolean(
+          mounted.current
+          && currentThreadId
+          && threadVersions.current.has(currentThreadId)
+          && nextVersions.get(currentThreadId) !== threadVersions.current.get(currentThreadId),
+        )
+
+        threadVersions.current = nextVersions
+        mounted.current = true
+
+        if (listChanged) await aui.threads.reload()
+        if (activeThreadChanged && !isRunningRef.current && !draftRef.current.trim()) {
+          await aui.threads.reloadMainThread()
+        }
+      } catch {
+        // A temporary network failure should not interrupt the chat experience.
+        // The next interval or tab focus will retry automatically.
+      } finally {
+        polling.current = false
+      }
+    }
+
+    function pollWhenVisible() {
+      if (document.visibilityState === 'visible') void poll()
+    }
+
+    void poll()
+    const intervalId = window.setInterval(() => void poll(), CONVERSATION_POLL_INTERVAL_MS)
+    document.addEventListener('visibilitychange', pollWhenVisible)
+    window.addEventListener('focus', pollWhenVisible)
+
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', pollWhenVisible)
+      window.removeEventListener('focus', pollWhenVisible)
+    }
+  }, [aui, projectId])
+
   return null
 }
